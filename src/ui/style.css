@@ -142,6 +142,33 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   100% { transform: translate(-50%, -140px); }
 }
 
+.daypanel {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 8px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: rgba(255, 250, 240, 0.9);
+  box-shadow: var(--shadow);
+  font-size: 16px;
+}
+.daypanel label { font-weight: 700; }
+.daypanel output { justify-self: end; font-variant-numeric: tabular-nums; }
+.daypanel input {
+  grid-column: 1 / -1;
+  width: min(220px, 50vw);
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .daypanel { bottom: auto; top: 64px; }
+}
+
 .dpad {
   display: none;
   position: absolute;

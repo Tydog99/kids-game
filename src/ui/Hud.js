@@ -1,12 +1,19 @@
+import { DAY_LENGTHS, formatDayLength } from '../world/skyState.js';
+
 // In-game overlay: seed/share, new world, controls hint, town banner, touch d-pad.
 export class Hud {
-  constructor({ seed, onExit, input }) {
+  constructor({ seed, onExit, input, dayIndex, onDaySpeed }) {
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
     this.el.innerHTML = `
       <button class="pill seed" title="Copy this world's seed to share it">🌍 <span></span></button>
       <button class="pill exit">New World</button>
       <div class="banner"></div>
+      <div class="daypanel">
+        <label for="dayspeed">☀️ Sun speed</label>
+        <input id="dayspeed" type="range" min="0" max="${DAY_LENGTHS.length - 1}" step="1" />
+        <output for="dayspeed"></output>
+      </div>
       <div class="hint">⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn</div>
       <div class="dpad">
         <button data-a="forward">▲</button><button data-a="left">◀</button>
@@ -23,6 +30,20 @@ export class Hud {
         .catch(() => this.flash(seedBtn, seed));
     };
     this.el.querySelector('.exit').onclick = onExit;
+    const slider = this.el.querySelector('#dayspeed');
+    const readout = this.el.querySelector('.daypanel output');
+    slider.value = dayIndex;
+    readout.textContent = formatDayLength(DAY_LENGTHS[dayIndex]);
+    slider.addEventListener('input', () => {
+      const i = Number(slider.value);
+      readout.textContent = formatDayLength(DAY_LENGTHS[i]);
+      onDaySpeed(i);
+    });
+    // hand the arrow keys back to walking once the slider is let go
+    const release = () => slider.blur();
+    slider.addEventListener('pointerup', release);
+    slider.addEventListener('change', release);
+
     this.hint = this.el.querySelector('.hint');
     this.banner = this.el.querySelector('.banner');
     this.input = input;

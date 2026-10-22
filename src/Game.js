@@ -9,6 +9,9 @@ import { FollowCamera } from './camera/FollowCamera.js';
 import { Hud } from './ui/Hud.js';
 import { addLights, SKY } from './scene.js';
 import { createRng } from './rng.js';
+import { DayCycle } from './world/DayCycle.js';
+import { DAY_LENGTHS, DEFAULT_DAY_INDEX } from './world/skyState.js';
+import { load, save } from './ui/storage.js';
 
 const TOWN_PREFIX = ['Maple', 'Pebble', 'Ember', 'Mossy', 'Sunny', 'Acorn', 'Willow', 'Cobble', 'Breezy', 'Fern', 'Cinder', 'Berry'];
 const TOWN_SUFFIX = ['Town', 'Village', 'Hollow', 'Meadow', 'City'];
@@ -29,7 +32,19 @@ export class Game {
     this.scene.add(this.player.object);
     this.follow = new FollowCamera(this.camera, (x, z) => tileAt(this.world, x, z) === T.BUILDING);
     this.input = new Input();
-    this.hud = new Hud({ seed, onExit, input: this.input });
+    const saved = Number(load('daySpeed', DEFAULT_DAY_INDEX));
+    const dayIndex = Number.isInteger(saved) && saved >= 0 && saved < DAY_LENGTHS.length ? saved : DEFAULT_DAY_INDEX;
+    this.dayCycle = new DayCycle(this.scene, this.lights, { dayLength: DAY_LENGTHS[dayIndex] });
+    this.hud = new Hud({
+      seed,
+      onExit,
+      input: this.input,
+      dayIndex,
+      onDaySpeed: (i) => {
+        this.dayCycle.dayLength = DAY_LENGTHS[i];
+        save('daySpeed', String(i));
+      },
+    });
 
     const nameRng = createRng(`${seed}:names`);
     const prefixes = [...TOWN_PREFIX];
@@ -48,8 +63,7 @@ export class Game {
     this.player.update(dt, this.input, t);
     const p = this.player.position;
     this.follow.update(dt, p, this.player.motor.yaw);
-    this.lights.sun.position.set(p.x + 8, 16, p.z + 6);
-    this.lights.sun.target.position.copy(p);
+    this.dayCycle.update(dt, p, this.camera);
     this.worldView.update(t);
 
     const m = this.player.motor;
@@ -69,6 +83,7 @@ export class Game {
 
   dispose() {
     this.input.dispose();
+    this.dayCycle.dispose();
     this.hud.dispose();
     this.worldView.dispose();
     this.player.character.dispose();
