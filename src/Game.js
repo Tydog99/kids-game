@@ -33,7 +33,9 @@ export class Game {
       this.chestTile = c.z * this.world.width + c.x;
     }
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(SKY);
+    // the sky is its own layer, drawn first; the world is drawn over it (see main.js)
+    this.skyScene = new THREE.Scene();
+    this.skyScene.background = new THREE.Color(SKY);
     this.scene.fog = new THREE.Fog(SKY, 18, 40);
     this.camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 42);
     this.lights = addLights(this.scene);
@@ -52,7 +54,7 @@ export class Game {
     };
     const dayIndex = savedIndex('daySpeed', DEFAULT_DAY_INDEX, DAY_LENGTHS.length);
     const meteorIndex = savedIndex('meteors', DEFAULT_METEOR_INDEX, METEOR_RATES.length);
-    this.dayCycle = new DayCycle(this.scene, this.lights, { dayLength: DAY_LENGTHS[dayIndex] });
+    this.dayCycle = new DayCycle(this.scene, this.skyScene, this.lights, { dayLength: DAY_LENGTHS[dayIndex] });
     this.dayCycle.shootingStars.perSecond = METEOR_RATES[meteorIndex].perSecond;
     this.hud = new Hud({
       seed,

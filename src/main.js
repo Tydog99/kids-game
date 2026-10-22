@@ -52,7 +52,17 @@ renderer.setAnimationLoop(() => {
   const t = clock.elapsedTime;
   if (!mode) return;
   mode.update(dt, t);
-  renderer.render(mode.scene, mode.camera);
+  if (mode.skyScene) {
+    // sky layer first, then the world on top with a fresh depth buffer
+    renderer.autoClear = false;
+    renderer.clear();
+    renderer.render(mode.skyScene, mode.camera);
+    renderer.clearDepth();
+    renderer.render(mode.scene, mode.camera);
+    renderer.autoClear = true;
+  } else {
+    renderer.render(mode.scene, mode.camera);
+  }
 });
 
 window.__voxel = { get mode() { return mode; }, renderer };

@@ -10,7 +10,8 @@ const BEAM_HEIGHT = 60;
 const BEAM_RADIUS = 0.22;
 const BEAM_MAX_DIST = 34; // beams farther than this are drawn closer (and smaller) so they're never clipped
 const MIN_BEAM_ANGLE = 0.006; // radians: beams never get thinner than this on screen
-const COINS = 160;
+const COINS = 1600;
+const POUR_SECONDS = 6;
 
 function beamMaterial(color) {
   return new THREE.ShaderMaterial({
@@ -78,13 +79,26 @@ export class TreasureView {
     this.lid.add(lidMesh);
     this.chest.add(body, this.lid);
     // warm glow on the ground and a soft halo
-    this.glowLight = new THREE.PointLight('#ffc23d', 3, 5, 1.5);
-    this.glowLight.position.set(0, 0.9, 0);
+    this.glowLight = new THREE.PointLight('#ffc23d', 6, 11, 1.2);
+    this.glowLight.position.set(0, 1.2, 0);
     this.chest.add(this.glowLight);
-    this.halo = makeBeam('#ffcf4d', 0.9);
-    this.halo.scale.y = 1.6 / BEAM_HEIGHT;
-    this.halo.material.uniforms.uOpacity.value = 0.35;
+    this.halo = makeBeam('#ffcf4d', 1.7);
+    this.halo.scale.y = 3.6 / BEAM_HEIGHT;
+    this.halo.material.uniforms.uOpacity.value = 0.45;
     this.chest.add(this.halo);
+    // soft pool of golden light on the ground around the chest
+    this.pool = new THREE.Mesh(new THREE.CircleGeometry(3.2, 40), new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color('#ffc93d') }, uOpacity: { value: 0.6 } },
+      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv;
+        void main() { float r = length(vUv - 0.5) * 2.0; float a = pow(max(0.0, 1.0 - r), 1.8); gl_FragColor = vec4(uColor, a * uOpacity); }`,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    this.pool.rotation.x = -Math.PI / 2;
+    this.pool.position.y = 0.01 - 1 / 16;
+    this.chest.add(this.pool);
     this.group.add(this.chest);
     this.lidOpen = 0;
     // a beam over the chest appears once all keys are found, to guide you home
@@ -153,7 +167,8 @@ export class TreasureView {
   update(dt, t, camera) {
     // chest glow pulses; brighter once you have all the keys
     const eager = this.hunt.hasAllKeys && !this.hunt.chest.open ? 1 : 0;
-    this.glowLight.intensity = 2.5 + Math.sin(t * 3) * 0.8 + eager * 2;
+    this.glowLight.intensity = 5 + Math.sin(t * 3) * 1.5 + eager * 4;
+    this.pool.material.uniforms.uOpacity.value = 0.5 + Math.sin(t * 3) * 0.12 + eager * 0.25;
     this.chestMat.emissiveIntensity = 0.5 + Math.sin(t * 3) * 0.15 + eager * 0.3;
     this.halo.material.uniforms.uTime.value = t;
 
@@ -197,15 +212,16 @@ export class TreasureView {
     const e = 1 - Math.pow(1 - this.lidOpen, 3);
     this.lid.rotation.x = -1.95 * e - Math.sin(e * Math.PI) * 0.2;
 
-    // pour coins out over the first ~1.5 seconds
+    // pour coins out for several seconds: a big burst first, then a steady fountain
     this.coinTimer += dt;
-    const want = Math.min(COINS, Math.floor((this.coinTimer / 1.5) * COINS));
+    const k = Math.min(1, this.coinTimer / POUR_SECONDS);
+    const want = Math.min(COINS, Math.floor((1 - Math.pow(1 - k, 1.6)) * COINS));
     const origin = this.chest.position;
     while (this.coinState.length < want) {
-      const a = Math.random() * Math.PI * 2, out = 0.8 + Math.random() * 2.4;
+      const a = Math.random() * Math.PI * 2, out = 0.6 + Math.random() * 3.4;
       this.coinState.push({
         p: new THREE.Vector3(origin.x + (Math.random() - 0.5) * 0.4, origin.y + 0.65, origin.z + (Math.random() - 0.5) * 0.3),
-        v: new THREE.Vector3(Math.cos(a) * out, 3.5 + Math.random() * 3.5, Math.sin(a) * out),
+        v: new THREE.Vector3(Math.cos(a) * out, 3.5 + Math.random() * 4.5, Math.sin(a) * out),
         r: new THREE.Vector3(Math.random() * 6, Math.random() * 6, Math.random() * 6),
         spin: new THREE.Vector3((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20),
         resting: false,

@@ -19,8 +19,11 @@ function celestial(build, size) {
 const inDisc = (x, y, r) => (x - 3.5) ** 2 + (y - 3.5) ** 2 <= r * r;
 
 export class DayCycle {
-  constructor(scene, lights, { phase = 0.08, dayLength = 30 } = {}) {
+  // scene: the world (gets fog). skyScene: drawn first, behind everything (background, sun,
+  // moon, stars, clouds), so sky objects can never poke through houses or trees.
+  constructor(scene, skyScene, lights, { phase = 0.08, dayLength = 30 } = {}) {
     this.scene = scene;
+    this.skyScene = skyScene;
     this.lights = lights;
     this.phase = phase;
     this.dayLength = dayLength;
@@ -49,9 +52,9 @@ export class DayCycle {
     sg.setAttribute('position', new THREE.Float32BufferAttribute(starPos.map((p) => p * SKY_DISTANCE * 1.05), 3));
     this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 2, sizeAttenuation: false, transparent: true, fog: false, depthWrite: false }));
 
-    scene.add(this.sun, this.moon, this.stars);
-    this.clouds = new Clouds(scene);
-    this.shootingStars = new ShootingStars(scene);
+    skyScene.add(this.sun, this.moon, this.stars);
+    this.clouds = new Clouds(skyScene);
+    this.shootingStars = new ShootingStars(skyScene);
     this.center = new THREE.Vector3();
   }
 
@@ -72,7 +75,7 @@ export class DayCycle {
     hemi.groundColor.setRGB(...s.hemi.ground, THREE.SRGBColorSpace);
     hemi.intensity = s.hemi.intensity;
 
-    this.scene.background.setRGB(...s.sky, THREE.SRGBColorSpace);
+    this.skyScene.background.setRGB(...s.sky, THREE.SRGBColorSpace);
     this.scene.fog?.color.setRGB(...s.sky, THREE.SRGBColorSpace);
 
     // sky objects follow the camera so they feel infinitely far away
@@ -95,7 +98,7 @@ export class DayCycle {
     for (const o of [this.sun, this.moon, this.stars, this.halo]) {
       o.geometry.dispose();
       o.material.dispose();
-      this.scene.remove(o);
+      this.skyScene.remove(o);
     }
   }
 }
