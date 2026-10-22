@@ -4,6 +4,7 @@ import { METEOR_RATES } from '../world/shootingStars.js';
 // In-game overlay: seed/share, new world, controls hint, town banner, touch d-pad.
 export class Hud {
   constructor({ seed, onExit, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate }) {
+    this.onDebugChange = null;
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
     this.el.innerHTML = `
@@ -20,6 +21,7 @@ export class Hud {
           <div class="setting-head"><label for="meteors">🌠 Shooting stars</label><output for="meteors"></output></div>
           <input id="meteors" type="range" min="0" max="${METEOR_RATES.length - 1}" step="1" />
         </div>
+        <label class="debug" hidden><input id="debug-open" type="checkbox" /> 🛠️ Debug: open without keys</label>
       </div>
       <div class="hint">⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around</div>
       <div class="dpad">
@@ -87,6 +89,18 @@ export class Hud {
     this.banner.classList.remove('show');
     void this.banner.offsetWidth; // restart the animation
     this.banner.classList.add('show');
+  }
+
+  // Treasure hunt only: checkbox that lets the chest open without keys.
+  showDebugToggle(checked, onChange) {
+    const row = this.el.querySelector('.debug');
+    const box = row.querySelector('input');
+    row.hidden = false;
+    box.checked = checked;
+    box.addEventListener('change', () => {
+      onChange(box.checked);
+      box.blur(); // hand the arrow keys back to walking
+    });
   }
 
   showKeys(count, total) {

@@ -69,4 +69,11 @@ describe('TreasureHunt', () => {
     expect(h.chest.open).toBe(true);
     expect(h.update(0.1, 10.5, 9.55, 0.28)).toEqual([]);
   });
+
+  it('debug toggle opens the chest without any keys', () => {
+    const h = hunt();
+    h.debugOpenWithoutKeys = true;
+    expect(h.update(0.1, 9.6, 10.5, 0.28)).toEqual([{ type: 'open' }]);
+    expect(h.collected).toBe(0);
+  });
 });

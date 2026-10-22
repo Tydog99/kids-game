@@ -77,6 +77,7 @@ export class TreasureHunt {
     this.chest = { ...chest, open: false };
     this.keys = keys.map((k) => ({ ...k, collected: false }));
     this.lockedCooldown = 0;
+    this.debugOpenWithoutKeys = false; // debug toggle: the chest opens even with no keys
   }
 
   get collected() {
@@ -99,7 +100,7 @@ export class TreasureHunt {
       }
     }
     if (!this.chest.open && this.touchingChest(px, pz, playerRadius)) {
-      if (this.hasAllKeys) {
+      if (this.hasAllKeys || this.debugOpenWithoutKeys) {
         this.chest.open = true;
         events.push({ type: 'open' });
       } else if (this.lockedCooldown === 0) {

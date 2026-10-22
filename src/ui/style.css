@@ -191,6 +191,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   font-size: 15px;
 }
 .setting { display: flex; flex-direction: column; gap: 2px; }
+.daypanel .debug { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #4a5470; cursor: pointer; }
+.daypanel .debug[hidden] { display: none; }
+.daypanel .debug input { margin: 0; accent-color: var(--red); cursor: pointer; }
 .setting-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .setting-head label { font-weight: 700; white-space: nowrap; }
 .setting-head output { font-size: 13px; color: #4a5470; font-variant-numeric: tabular-nums; white-space: nowrap; }

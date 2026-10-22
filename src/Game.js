@@ -77,6 +77,11 @@ export class Game {
     if (this.hunt) {
       this.treasureView = new TreasureView(this.scene, this.hunt);
       this.hud.showKeys(0, this.hunt.keys.length);
+      this.hunt.debugOpenWithoutKeys = load('debugOpen', 'false') === 'true';
+      this.hud.showDebugToggle(this.hunt.debugOpenWithoutKeys, (on) => {
+        this.hunt.debugOpenWithoutKeys = on;
+        save('debugOpen', String(on));
+      });
       this.hud.showBanner('Find the 3 golden keys! Follow the beams of light', true);
     }
 
