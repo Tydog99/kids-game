@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { buildGeometry } from '../voxel/builder.js';
 import { buildDragonParts, DRAGON_VOXEL as V } from './dragonModels.js';
+import { VoxelGrid } from '../voxel/VoxelGrid.js';
+import { Breath } from './Breath.js';
 
 // Target pose for each mode. Angles in radians; lift in world units.
 const POSES = {
@@ -64,8 +66,27 @@ export class Dragon {
     });
     this.head = new THREE.Group();
     this.head.position.copy(pos);
-    this.head.add(mesh(parts.head));
     parent.add(this.head);
+    // split the lower jaw off the head so the mouth can open
+    const { skull, snoutLen, snoutW } = spec.head;
+    const zc = skull[2] * 0.6, s0 = Math.floor(zc + skull[2] * 0.4), s1 = zc + skull[2] * 0.4 + snoutLen;
+    const upper = new VoxelGrid(), jaw = new VoxelGrid();
+    for (const v of parts.head.voxels()) {
+      const inMouth = v.z >= s0 + 1 && Math.abs(v.x + 0.5) < snoutW - 1;
+      if (v.z >= s0 && v.y <= -2) jaw.set(v.x, v.y, v.z, inMouth && v.y === -2 ? '#c94a5a' : v.color); // tongue on top
+      else upper.set(v.x, v.y, v.z, inMouth && v.y === -1 ? '#6e1b1b' : v.color); // roof of the mouth
+    }
+    this.head.add(mesh(upper));
+    this.jaw = new THREE.Group();
+    this.jaw.position.set(0, -1 * V, s0 * V);
+    this.jaw.add(mesh(jaw, [0, -1, s0]));
+    this.head.add(this.jaw);
+    // where the breath comes out: just in front of the open mouth
+    this.mouth = new THREE.Object3D();
+    this.mouth.position.set(0, -1.5 * V, (s1 + 1.5) * V);
+    this.head.add(this.mouth);
+    this.breathTime = 0;
+    this.breathOpen = 0;
 
     // tail chain
     parent = this.hips;
@@ -118,6 +139,20 @@ export class Dragon {
     this.mode = mode;
   }
 
+  // Adds the breath particles (fire, ice or diamonds) to a scene.
+  enableBreath(scene, groundY = 0) {
+    this.breath = new Breath(scene, this.spec.breath);
+    this.groundY = groundY;
+  }
+
+  breathe(seconds = 2) {
+    this.breathTime = Math.max(this.breathTime, seconds);
+  }
+
+  get breathing() {
+    return this.breathTime > 0;
+  }
+
   update(dt) {
     this.time += dt;
     const target = POSES[this.mode];
@@ -140,7 +175,13 @@ export class Dragon {
       j.rotation.x = (i === 0 ? p.neck : p.neckBend) + Math.sin(w * 2 + i) * 0.02 * p.gait;
       j.rotation.y = Math.sin(t * 0.7 + i) * 0.05;
     });
-    this.head.rotation.x = p.head + Math.sin(t * 1.3) * 0.04;
+    // breathing: jaw drops open, head pushes forward and aims a little down, with a shudder
+    this.breathTime = Math.max(0, this.breathTime - dt);
+    this.breathOpen += ((this.breathing ? 1 : 0) - this.breathOpen) * Math.min(1, dt * 9);
+    const b = this.breathOpen;
+    this.jaw.rotation.x = b * 0.55;
+    this.neck[this.neck.length - 1].rotation.x += b * 0.12;
+    this.head.rotation.x = p.head + Math.sin(t * 1.3) * 0.04 * (1 - b) + b * 0.18 + Math.sin(t * 40) * 0.015 * b;
     this.head.rotation.z = Math.sin(t * 0.9) * 0.05 * p.paw;
 
     // tail sways side to side and streams out behind in flight
@@ -165,6 +206,13 @@ export class Dragon {
       inner.rotation.set(-p.fold * 0.8, p.fold * 1.4, p.fold * 0.2 + spread * (p.wingRaise + beat * 0.7 * p.flap), 'YXZ');
       // the outer half folds back along the inner half, flipped so its membrane hangs the same way
       outer.rotation.set(p.fold * Math.PI, -p.fold * 2.95, spread * Math.sin(f - 0.7) * 0.45 * p.flap, 'YXZ');
+    }
+
+    if (this.breath) {
+      this.root.updateMatrixWorld(true);
+      const origin = this.mouth.getWorldPosition(new THREE.Vector3());
+      const dir = this.head.getWorldDirection(new THREE.Vector3());
+      this.breath.update(dt, this.breathing && this.breathOpen > 0.5, origin, dir, this.groundY);
     }
   }
 }

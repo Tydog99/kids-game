@@ -38,18 +38,20 @@ controls.maxDistance = 60;
 controls.maxPolarAngle = Math.PI * 0.49;
 
 // dragons in a row, turned three-quarters so you see their side profile
-const layout = { ember: [-5.6, 0.4], glimmer: [0, 1.6], frost: [5.4, -0.6] };
+const layout = { ember: [-6.4, 0.6], glimmer: [0, 1.2], frost: [6.4, -1.4] };
 const dragons = Object.keys(DRAGONS).map((id) => {
   const d = new Dragon(id);
   d.id = id;
   d.root.position.set(layout[id][0], 0, layout[id][1]);
-  d.root.rotation.y = -0.95;
+  // three-quarter views; each breath shoots out in front of its neighbor instead of at it
+  d.root.rotation.y = { ember: -0.3, glimmer: -0.7, frost: -0.75 }[id];
   scene.add(d.root);
+  d.enableBreath(scene, 0);
   return d;
 });
 
 // --- camera framing ---
-const HOME = { pos: new THREE.Vector3(2.2, 4.6, 14.5), target: new THREE.Vector3(0, 1.6, 0) };
+const HOME = { pos: new THREE.Vector3(2.2, 4.8, 16), target: new THREE.Vector3(0, 1.6, 0) };
 let tween = null;
 function frame(pos, target) {
   tween = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), pos, target, t: 0 };
@@ -91,7 +93,7 @@ const AUTO = ['walk', 'rear', 'walk', 'fly'];
 let mode = 'auto', autoIndex = 0, autoTimer = 0;
 function setMode(m) {
   mode = m;
-  document.querySelectorAll('.poses button').forEach((b) => {
+  document.querySelectorAll('.poses button[data-mode]').forEach((b) => {
     const on = b.dataset.mode === m;
     b.classList.toggle('selected', on);
     b.setAttribute('aria-checked', String(on));
@@ -103,10 +105,16 @@ function setMode(m) {
     dragons.forEach((d) => d.setMode(AUTO[0]));
   }
 }
-document.querySelectorAll('.poses button').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
+document.querySelectorAll('.poses button[data-mode]').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
+const breatheAll = () => (focused ? [focused] : dragons).forEach((d) => d.breathe(2.2));
+document.querySelector('.breathe').onclick = breatheAll;
 addEventListener('keydown', (e) => {
   const m = { Digit1: 'walk', Digit2: 'rear', Digit3: 'fly', Digit0: 'auto' }[e.code];
   if (m) setMode(m);
+  if (e.code === 'Space') {
+    e.preventDefault();
+    breatheAll();
+  }
 });
 setMode('auto');
 
@@ -125,6 +133,8 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
   if (mode === 'auto') {
     autoTimer += dt;
+    const before = autoTimer - dt;
+    if (AUTO[autoIndex] !== 'walk' && before < 1 && autoTimer >= 1) dragons.forEach((d) => d.breathe(1.8));
     if (autoTimer > 3.6) {
       autoTimer = 0;
       autoIndex = (autoIndex + 1) % AUTO.length;

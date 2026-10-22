@@ -10,7 +10,7 @@ export const DRAGONS = {
   ember: {
     name: 'Ember',
     tagline: 'The classic fire dragon',
-    blurb: 'Sturdy and brave. Big bat wings, curled horns, a spiky back and a spade-tipped tail.',
+    blurb: 'Sturdy and brave. Big bat wings, curled horns, a spiky back and a spade-tipped tail. Breathes fire.',
     colors: {
       body: '#d8432f', dark: '#a52e22', belly: '#f5cf86', wing: '#f0853a', wingDark: '#c95f22',
       horn: '#f7ecd2', eye: '#ffcc2e', spike: '#7a1f17', accent: '#ffb347',
@@ -25,11 +25,12 @@ export const DRAGONS = {
     tail: { base: [0, 3, -3], segments: 5, len: 6, r0: 5, r1: 1.2, tip: 'spade' },
     wing: { pivot: [5, 8, 14], spanA: 17, spanB: 25, depth: 19, style: 'bat' },
     spikes: 'ridge',
+    breath: 'fire',
   },
   glimmer: {
     name: 'Glimmer',
     tagline: 'The cute baby dragon',
-    blurb: 'Small and round with a big head, huge sparkly eyes, rosy cheeks and a heart on its tail.',
+    blurb: 'Small and round with a big head, huge sparkly eyes, rosy cheeks and a heart on its tail. Breathes diamonds.',
     colors: {
       body: '#5fd3b0', dark: '#3fae8d', belly: '#ffd9e4', wing: '#b59cff', wingDark: '#8f72f0',
       horn: '#ffe9a8', eye: '#3a7bd5', spike: '#ffb3c7', accent: '#ff8fb1',
@@ -44,11 +45,12 @@ export const DRAGONS = {
     tail: { base: [0, 3, -2], segments: 3, len: 5, r0: 3.6, r1: 1.3, tip: 'heart' },
     wing: { pivot: [4, 7, 8], spanA: 7, spanB: 9, depth: 9, style: 'round' },
     spikes: 'bumps',
+    breath: 'diamonds',
   },
   frost: {
     name: 'Frost',
     tagline: 'The sleek ice dragon',
-    blurb: 'Long and graceful. Crystal horns and back shards, wide fin wings and a whip tail with an icy tip.',
+    blurb: 'Long and graceful. Crystal horns and back shards, wide fin wings and a whip tail with an icy tip. Breathes ice.',
     colors: {
       body: '#7cc6ee', dark: '#4a8fc2', belly: '#eef8ff', wing: '#c3e9ff', wingDark: '#6fb3e0',
       horn: '#d9fbff', eye: '#7af0ff', spike: '#b8f4ff', accent: '#ffffff',
@@ -63,6 +65,7 @@ export const DRAGONS = {
     tail: { base: [0, 3, -3], segments: 7, len: 6, r0: 4, r1: 0.8, tip: 'crystal' },
     wing: { pivot: [4.5, 7, 19], spanA: 20, spanB: 29, depth: 21, style: 'fin' },
     spikes: 'crystal',
+    breath: 'ice',
   },
 };
 
