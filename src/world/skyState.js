@@ -67,7 +67,9 @@ export const SKY_ARC_PEAK = (14 * Math.PI) / 180;
 export function skyPathDir(phase) {
   const a = phase * Math.PI * 2;
   const elev = Math.sin(a) * SKY_ARC_PEAK;
-  return [Math.cos(a) * Math.cos(elev), Math.sin(elev), Math.abs(Math.sin(a)) * Math.cos(elev)];
+  // Below the horizon the path continues round the north side, so the motion is one smooth
+  // loop with no back-and-forth where it rises and sets.
+  return [Math.cos(a) * Math.cos(elev), Math.sin(elev), Math.sin(a) * Math.cos(elev)];
 }
 
 // Slider steps for the "Sun speed" control: seconds per full day (Infinity = paused).

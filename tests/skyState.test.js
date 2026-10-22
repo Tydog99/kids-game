@@ -56,4 +56,18 @@ describe('skyState', () => {
     skyState(0.75).moonSkyDir.forEach((v, i) => expect(v).toBeCloseTo(skyPathDir(0.25)[i]));
     for (let p = 0; p < 1; p += 0.05) expect(Math.hypot(...skyPathDir(p))).toBeCloseTo(1);
   });
+
+  it('the sun moves the same way round the sky the whole time (no reversing at rise/set)', () => {
+    let prev = null;
+    for (let p = -0.1; p <= 1.1; p += 0.002) {
+      const [x, , z] = skyPathDir(p);
+      const az = Math.atan2(z, x);
+      if (prev !== null) {
+        let d = az - prev;
+        if (d < -Math.PI) d += 2 * Math.PI; // wrap-around
+        expect(d).toBeGreaterThan(0);
+      }
+      prev = az;
+    }
+  });
 });
