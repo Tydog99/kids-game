@@ -39,7 +39,8 @@ export class FollowCamera {
     this.first = false;
     const h = HEIGHT + (DIST - this.dist) * 0.15;
     this.camera.position.set(this.focus.x - fx * this.dist, this.focus.y + h, this.focus.z - fz * this.dist);
-    this.look.set(this.focus.x + fx * LOOK_AHEAD, this.focus.y + 0.5, this.focus.z + fz * LOOK_AHEAD);
+    // aim fairly level so the horizon (where the sun and moon travel) stays in view
+    this.look.set(this.focus.x + fx * LOOK_AHEAD, this.focus.y + 1.0, this.focus.z + fz * LOOK_AHEAD);
     this.camera.lookAt(this.look);
   }
 }

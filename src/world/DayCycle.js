@@ -25,14 +25,14 @@ export class DayCycle {
 
     this.sun = celestial((g) => {
       g.box(0, 0, 0, 7, 7, 1, (x, y) => (inDisc(x, y, 4.2) ? (inDisc(x, y, 2.6) ? '#fff6b0' : '#ffd23f') : null));
-    }, 0.42);
+    }, 0.55);
     this.moon = celestial((g) => {
       g.box(0, 0, 0, 7, 7, 1, (x, y) => (inDisc(x, y, 4.2) ? '#eef2ff' : null));
       for (const [x, y] of [[2, 4], [5, 2], [4, 5], [2, 2]]) g.set(x, y, 2, '#c5cce0').set(x, y, 1, '#c5cce0');
-    }, 0.32);
+    }, 0.45);
     // glow halo behind the sun
     this.halo = new THREE.Mesh(
-      new THREE.CircleGeometry(3.4, 24),
+      new THREE.CircleGeometry(4.2, 24),
       new THREE.MeshBasicMaterial({ color: '#fff1a8', transparent: true, opacity: 0.35, fog: false, depthWrite: false }),
     );
     this.sun.add(this.halo);
@@ -73,10 +73,10 @@ export class DayCycle {
 
     // sky objects follow the camera so they feel infinitely far away
     const c = camera.position;
-    for (const [mesh, dir] of [[this.sun, s.sunDir], [this.moon, s.moonDir]]) {
+    for (const [mesh, dir] of [[this.sun, s.sunSkyDir], [this.moon, s.moonSkyDir]]) {
       mesh.position.set(c.x + dir[0] * SKY_DISTANCE, c.y + dir[1] * SKY_DISTANCE, c.z + dir[2] * SKY_DISTANCE);
       mesh.lookAt(c);
-      mesh.visible = dir[1] > -0.15;
+      mesh.visible = dir[1] > -0.08;
     }
     this.stars.position.copy(c);
     this.stars.material.opacity = s.stars;

@@ -26,9 +26,10 @@ const HEMI_GROUND_NIGHT = hexToRgb('#3f5250');
 
 export function skyState(phase) {
   const a = phase * Math.PI * 2;
-  // the sun travels east (+x) → overhead → west (-x), tilted a little toward -z so shadows aren't straight sideways
-  const len = Math.hypot(Math.cos(a), Math.sin(a), 0.35);
-  const sunDir = [Math.cos(a) / len, Math.sin(a) / len, -0.35 / len];
+  // Lighting path: east (+x) → high in the south → west (-x). Leaning toward the south (+z),
+  // the side where the sun and moon are drawn, so shadows point away from them.
+  const len = Math.hypot(Math.cos(a), Math.sin(a), 0.45);
+  const sunDir = [Math.cos(a) / len, Math.sin(a) / len, 0.45 / len];
   const moonDir = sunDir.map((v) => -v);
   const elev = Math.sin(a);
 
@@ -45,6 +46,8 @@ export function skyState(phase) {
     phase,
     sunDir,
     moonDir,
+    sunSkyDir: skyPathDir(phase),
+    moonSkyDir: skyPathDir(phase + 0.5),
     day,
     light,
     sky: mixRgb(mixRgb(SKY_NIGHT, SKY_DAY, day), SKY_SUNSET, sunsetAmt),
@@ -55,6 +58,16 @@ export function skyState(phase) {
     },
     stars: 1 - smoothstep(-0.25, 0.05, elev),
   };
+}
+
+// Where the sun/moon is *drawn*: a low arc across the southern sky (east → south → west)
+// so it stays in view of the third-person camera instead of passing overhead.
+export const SKY_ARC_PEAK = (14 * Math.PI) / 180;
+
+export function skyPathDir(phase) {
+  const a = phase * Math.PI * 2;
+  const elev = Math.sin(a) * SKY_ARC_PEAK;
+  return [Math.cos(a) * Math.cos(elev), Math.sin(elev), Math.abs(Math.sin(a)) * Math.cos(elev)];
 }
 
 // Slider steps for the "Sun speed" control: seconds per full day (Infinity = paused).

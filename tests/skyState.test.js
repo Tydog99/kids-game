@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { skyState, formatDayLength, DAY_LENGTHS, DEFAULT_DAY_INDEX } from '../src/world/skyState.js';
+import { skyState, skyPathDir, SKY_ARC_PEAK, formatDayLength, DAY_LENGTHS, DEFAULT_DAY_INDEX } from '../src/world/skyState.js';
 
 const luminance = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
@@ -44,5 +44,16 @@ describe('skyState', () => {
     expect(formatDayLength(30)).toBe('30 s day');
     expect(formatDayLength(120)).toBe('2 min day');
     expect(formatDayLength(Infinity)).toBe('Paused');
+  });
+
+  it('draws the sun and moon on a low arc across the south', () => {
+    const noon = skyPathDir(0.25);
+    expect(Math.asin(noon[1])).toBeCloseTo(SKY_ARC_PEAK); // never higher than the peak
+    expect(noon[2]).toBeGreaterThan(0.9); // due south (+z)
+    expect(skyPathDir(0.01)[0]).toBeGreaterThan(0.9); // rises east
+    expect(skyPathDir(0.49)[0]).toBeLessThan(-0.9); // sets west
+    // the moon takes the same path half a day later
+    skyState(0.75).moonSkyDir.forEach((v, i) => expect(v).toBeCloseTo(skyPathDir(0.25)[i]));
+    for (let p = 0; p < 1; p += 0.05) expect(Math.hypot(...skyPathDir(p))).toBeCloseTo(1);
   });
 });
