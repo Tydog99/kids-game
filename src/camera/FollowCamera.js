@@ -3,8 +3,8 @@
 // ends up inside walls.
 import * as THREE from 'three';
 
-const DIST = 3.4; // tiles behind
-const HEIGHT = 2.1; // above the ground
+const DIST = 2.9; // tiles behind
+const HEIGHT = 1.8; // above the ground
 const LOOK_AHEAD = 2.2;
 const MIN_DIST = 0.9;
 
@@ -30,7 +30,9 @@ export class FollowCamera {
   update(dt, target, yaw) {
     const k = this.first ? 1 : 1 - Math.exp(-14 * dt);
     this.focus.lerp(target, k);
-    const fx = Math.sin(yaw), fz = Math.cos(yaw);
+    // trail the player's turn slightly so turning feels smooth, not rigid
+    this.yaw = this.first ? yaw : this.yaw + (yaw - this.yaw) * (1 - Math.exp(-10 * dt));
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     const want = this.clearDistance(fx, fz);
     // snap in quickly (never clip), ease back out slowly
     this.dist = this.first || want < this.dist ? want : this.dist + (want - this.dist) * (1 - Math.exp(-4 * dt));

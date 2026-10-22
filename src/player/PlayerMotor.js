@@ -1,108 +1,74 @@
-// Grid movement logic, kept free of three.js so it can be unit tested.
-// Up = step forward, Down = step back, Left/Right = turn 90°.
+// Free movement logic, kept free of three.js so it can be unit tested.
+// Up = walk forward, Down = back up, Left/Right = turn smoothly.
+// Positions are in world units; tile (x, z) covers [x, x+1) × [z, z+1).
 import { DIRS } from '../worldgen.js';
 
-export const STEP_TIME = 0.24;
-export const BACK_STEP_TIME = 0.32;
-export const TURN_TIME = 0.16;
-export const BUMP_TIME = 0.18;
+export const WALK_SPEED = 3.0; // tiles per second
+export const BACK_SPEED = 1.6;
+export const TURN_SPEED = 2.6; // radians per second
+export const RADIUS = 0.28; // collision half-size of the player
 
 export const yawForFacing = (f) => Math.atan2(DIRS[f][0], DIRS[f][1]);
 
 export class PlayerMotor {
   constructor({ x, z, facing = 2 }, isWalkable) {
     this.isWalkable = isWalkable;
-    this.x = x;
-    this.z = z;
-    this.facing = facing;
-    this.yaw = yawForFacing(facing);
-    this.px = x; // rendered (interpolated) position
-    this.pz = z;
-    this.state = 'idle';
-    this.t = 0;
-    this.duration = 0;
-    this.walkPhase = 0; // grows while walking, drives limb swing
-    this.bump = 0; // 0..1 nudge when walking into something
-    this.steps = 0;
+    this.px = x + 0.5;
+    this.pz = z + 0.5;
+    this.yaw = yawForFacing(facing); // 0 = facing +z; grows when turning left
+    this.speed = 0; // current forward speed (negative = backing up)
+    this.turnRate = 0;
+    this.walkPhase = 0; // grows with distance walked, drives limb swing
   }
 
-  // intent: { forward, back, left, right } — booleans.
-  // Returns true if the intent started a new move (so queued taps can be cleared).
+  get x() {
+    return Math.floor(this.px);
+  }
+
+  get z() {
+    return Math.floor(this.pz);
+  }
+
+  // intent: { forward, back, left, right } — booleans
   update(dt, intent) {
-    let remaining = dt;
-    let started = false;
-    // loop so a held key chains steps without a one-frame pause
-    for (let guard = 0; guard < 4 && remaining > 0; guard++) {
-      if (this.state === 'idle') {
-        if (!this.start(intent)) break;
-        started = true;
-      }
-      const left = this.duration - this.t;
-      const used = Math.min(left, remaining);
-      this.t += used;
-      remaining -= used;
-      this.apply();
-      if (this.t >= this.duration) this.finish();
-    }
-    if (this.state === 'idle') this.walkPhase = 0;
-    return started;
+    const turn = (intent.left ? 1 : 0) - (intent.right ? 1 : 0);
+    this.turnRate += (turn * TURN_SPEED - this.turnRate) * (1 - Math.exp(-14 * dt));
+    if (!turn && Math.abs(this.turnRate) < 0.01) this.turnRate = 0;
+    this.yaw += this.turnRate * dt;
+
+    const want = intent.forward ? WALK_SPEED : intent.back ? -BACK_SPEED : 0;
+    this.speed += (want - this.speed) * (1 - Math.exp(-12 * dt));
+    if (!want && Math.abs(this.speed) < 0.02) this.speed = 0;
+
+    const step = this.speed * dt;
+    const moved = this.move(Math.sin(this.yaw) * step, Math.cos(this.yaw) * step);
+    // about one full stride per tile walked; shuffle feet a little when turning on the spot
+    this.walkPhase += moved * 2 * Math.PI + Math.abs(this.turnRate) * dt * 1.5;
   }
 
-  start(intent) {
-    if (intent.left || intent.right) {
-      this.fromYaw = this.yaw;
-      this.facing = (this.facing + (intent.left ? 3 : 1)) % 4;
-      this.toYaw = this.fromYaw + (intent.left ? Math.PI / 2 : -Math.PI / 2);
-      return this.begin('turn', TURN_TIME);
+  // Moves each axis separately so the player slides along walls. Returns distance moved.
+  move(dx, dz) {
+    let moved = 0;
+    if (dx && this.fits(this.px + dx, this.pz)) {
+      this.px += dx;
+      moved += Math.abs(dx);
     }
-    if (intent.forward || intent.back) {
-      const dir = intent.forward ? 1 : -1;
-      const [dx, dz] = DIRS[this.facing];
-      const tx = this.x + dx * dir, tz = this.z + dz * dir;
-      if (!this.isWalkable(tx, tz)) {
-        this.bumpDir = dir;
-        return this.begin('bump', BUMP_TIME);
-      }
-      this.fromX = this.x;
-      this.fromZ = this.z;
-      this.x = tx; // logical tile updates immediately, so nothing else can claim it
-      this.z = tz;
-      this.stepDir = dir;
-      return this.begin('step', dir > 0 ? STEP_TIME : BACK_STEP_TIME);
+    if (dz && this.fits(this.px, this.pz + dz)) {
+      this.pz += dz;
+      moved += Math.abs(dz);
     }
-    return false;
+    return moved;
   }
 
-  begin(state, duration) {
-    this.state = state;
-    this.t = 0;
-    this.duration = duration;
+  fits(x, z) {
+    for (let tz = Math.floor(z - RADIUS); tz <= Math.floor(z + RADIUS); tz++)
+      for (let tx = Math.floor(x - RADIUS); tx <= Math.floor(x + RADIUS); tx++)
+        if (!this.isWalkable(tx, tz)) return false;
     return true;
   }
 
-  apply() {
-    const k = this.t / this.duration;
-    if (this.state === 'turn') {
-      const e = k * k * (3 - 2 * k);
-      this.yaw = this.fromYaw + (this.toYaw - this.fromYaw) * e;
-    } else if (this.state === 'step') {
-      this.px = this.fromX + (this.x - this.fromX) * k;
-      this.pz = this.fromZ + (this.z - this.fromZ) * k;
-      this.walkPhase = (this.steps + k) * Math.PI;
-    } else if (this.state === 'bump') {
-      this.bump = Math.sin(k * Math.PI) * this.bumpDir;
-    }
-  }
-
-  finish() {
-    if (this.state === 'step') {
-      this.px = this.x;
-      this.pz = this.z;
-      this.steps++;
-    }
-    if (this.state === 'turn') this.yaw = this.toYaw;
-    this.bump = 0;
-    this.state = 'idle';
-    this.t = 0;
+  // 0..1, how much of a full walk the legs should show
+  get stride() {
+    return Math.min(1, Math.abs(this.speed) / WALK_SPEED + Math.abs(this.turnRate) / TURN_SPEED * 0.3);
   }
 }

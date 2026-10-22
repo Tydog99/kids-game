@@ -1,7 +1,6 @@
-// Ties the grid motor (logic) to the character (visuals).
+// Ties the movement motor (logic) to the character (visuals).
 import { PlayerMotor } from './PlayerMotor.js';
 import { Character } from './Character.js';
-import { DIRS } from '../worldgen.js';
 
 export class Player {
   constructor(world, characterId, isWalkable) {
@@ -13,17 +12,16 @@ export class Player {
   }
 
   update(dt, input, time) {
-    if (this.motor.update(dt, input.peek())) input.clearTaps();
+    this.motor.update(dt, input.peek());
+    input.clearTaps();
     this.sync(time);
   }
 
   sync(time) {
     const m = this.motor;
-    const [dx, dz] = DIRS[m.facing];
-    const nudge = m.bump * 0.12;
-    this.object.position.set(m.px + 0.5 + dx * nudge, this.groundY, m.pz + 0.5 + dz * nudge);
+    this.object.position.set(m.px, this.groundY, m.pz);
     this.object.rotation.y = m.yaw;
-    this.character.animate(m.walkPhase, m.state === 'step', time);
+    this.character.animate(m.walkPhase, m.stride, time);
   }
 
   get position() {

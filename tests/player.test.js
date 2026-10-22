@@ -1,66 +1,76 @@
 import { describe, it, expect } from 'vitest';
-import { PlayerMotor, STEP_TIME, TURN_TIME, yawForFacing } from '../src/player/PlayerMotor.js';
+import { PlayerMotor, WALK_SPEED, TURN_SPEED, RADIUS } from '../src/player/PlayerMotor.js';
 
 const NONE = { forward: false, back: false, left: false, right: false };
 const open = () => true;
 
+function run(m, seconds, intent, dt = 1 / 60) {
+  for (let t = 0; t < seconds; t += dt) m.update(dt, intent);
+}
+
 describe('PlayerMotor', () => {
-  it('steps forward one tile in the facing direction', () => {
+  it('starts in the center of the spawn tile', () => {
+    const m = new PlayerMotor({ x: 5, z: 7, facing: 2 }, open);
+    expect([m.px, m.pz, m.x, m.z]).toEqual([5.5, 7.5, 5, 7]);
+  });
+
+  it('walks forward in the facing direction', () => {
     const m = new PlayerMotor({ x: 5, z: 5, facing: 0 }, open); // north = -z
-    m.update(0.01, { ...NONE, forward: true });
-    m.update(STEP_TIME, NONE);
-    expect([m.x, m.z]).toEqual([5, 4]);
-    expect([m.px, m.pz]).toEqual([5, 4]);
-    expect(m.state).toBe('idle');
+    run(m, 1, { ...NONE, forward: true });
+    expect(m.px).toBeCloseTo(5.5, 5);
+    expect(m.pz).toBeLessThan(5.5 - WALK_SPEED * 0.7);
   });
 
-  it('steps back while keeping its facing', () => {
+  it('backs up without changing direction', () => {
     const m = new PlayerMotor({ x: 5, z: 5, facing: 1 }, open); // east
-    m.update(0.01, { ...NONE, back: true });
-    m.update(1, NONE);
-    expect([m.x, m.z, m.facing]).toEqual([4, 5, 1]);
+    const yaw = m.yaw;
+    run(m, 1, { ...NONE, back: true });
+    expect(m.px).toBeLessThan(5.5);
+    expect(m.yaw).toBe(yaw);
   });
 
-  it('does not walk into blocked tiles', () => {
-    const m = new PlayerMotor({ x: 5, z: 5, facing: 2 }, (x, z) => !(x === 5 && z === 6));
-    m.update(0.01, { ...NONE, forward: true });
-    expect(m.state).toBe('bump');
-    m.update(1, NONE);
-    expect([m.x, m.z]).toEqual([5, 5]);
+  it('turns smoothly by any amount, not in 90° steps', () => {
+    const m = new PlayerMotor({ x: 5, z: 5, facing: 2 }, open);
+    run(m, 0.25, { ...NONE, left: true });
+    const turned = m.yaw;
+    expect(turned).toBeGreaterThan(0.1);
+    expect(turned).toBeLessThan(TURN_SPEED * 0.25 + 0.01);
+    run(m, 0.5, NONE);
+    run(m, 0.25, { ...NONE, right: true });
+    expect(m.yaw).toBeLessThan(turned + 0.2);
   });
 
-  it('turns left/right and wraps facing', () => {
-    const m = new PlayerMotor({ x: 0, z: 0, facing: 0 }, open);
-    m.update(0.01, { ...NONE, left: true });
-    m.update(TURN_TIME, NONE);
-    expect(m.facing).toBe(3);
-    m.update(0.01, { ...NONE, right: true });
-    m.update(TURN_TIME, NONE);
-    m.update(0.01, { ...NONE, right: true });
-    m.update(TURN_TIME, NONE);
-    expect(m.facing).toBe(1);
-    // yaw ends equivalent to the facing's yaw
-    const norm = (a) => ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    expect(norm(m.yaw)).toBeCloseTo(norm(yawForFacing(1)));
-  });
-
-  it('holding forward chains steps', () => {
+  it('can walk diagonally after a partial turn', () => {
     const m = new PlayerMotor({ x: 10, z: 10, facing: 2 }, open);
-    for (let i = 0; i < 60; i++) m.update(STEP_TIME / 10, { ...NONE, forward: true });
-    expect(m.z).toBeGreaterThanOrEqual(15);
+    m.yaw = Math.PI / 4;
+    run(m, 1, { ...NONE, forward: true });
+    expect(m.px - 10.5).toBeCloseTo(m.pz - 10.5, 1);
+    expect(m.px).toBeGreaterThan(11.5);
   });
 
-  it('ignores input mid-step', () => {
-    const m = new PlayerMotor({ x: 0, z: 0, facing: 2 }, open);
-    m.update(0.01, { ...NONE, forward: true });
-    m.update(0.01, { ...NONE, left: true });
-    expect(m.facing).toBe(2);
+  it('stops at blocked tiles', () => {
+    const wall = (x, z) => z !== 7; // row z=7 is blocked
+    const m = new PlayerMotor({ x: 5, z: 5, facing: 2 }, wall); // south = +z
+    run(m, 3, { ...NONE, forward: true });
+    expect(m.pz).toBeLessThanOrEqual(7 - RADIUS + 1e-9);
+    expect(m.z).toBe(6);
   });
 
-  it('reports when an intent starts a move', () => {
-    const m = new PlayerMotor({ x: 0, z: 0, facing: 2 }, open);
-    expect(m.update(0.01, NONE)).toBe(false);
-    expect(m.update(0.01, { ...NONE, left: true })).toBe(true);
-    expect(m.update(0.01, { ...NONE, left: true })).toBe(false); // busy turning
+  it('slides along a wall when walking into it at an angle', () => {
+    const wall = (x, z) => z !== 7;
+    const m = new PlayerMotor({ x: 5, z: 6, facing: 2 }, wall);
+    m.yaw = Math.PI / 4; // south-east
+    run(m, 1, { ...NONE, forward: true });
+    expect(m.px).toBeGreaterThan(6.5); // kept moving east
+    expect(m.z).toBe(6);
+  });
+
+  it('settles to a stop when keys are released', () => {
+    const m = new PlayerMotor({ x: 5, z: 5, facing: 2 }, open);
+    run(m, 0.5, { ...NONE, forward: true, left: true });
+    run(m, 1, NONE);
+    expect(m.speed).toBe(0);
+    expect(m.turnRate).toBe(0);
+    expect(m.stride).toBe(0);
   });
 });
