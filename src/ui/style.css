@@ -61,6 +61,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .title h1 span { color: var(--yellow); }
 .title .spacer { flex: 1; pointer-events: none; }
 .cards { display: flex; gap: clamp(40px, 14vw, 160px); }
+.modes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.mode {
+  padding: 8px 18px;
+  font-size: 20px;
+  font-weight: 700;
+  background: rgba(255, 250, 240, 0.85);
+}
+.mode.selected { background: var(--yellow); }
 .card {
   min-width: 120px;
   padding: 10px 22px;
@@ -108,6 +116,25 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .pill { position: absolute; top: 14px; padding: 6px 14px; font-size: 18px; font-weight: 500; }
 .pill.seed { left: 14px; max-width: calc(100vw - 180px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill.exit { right: 14px; }
+.keys {
+  position: absolute;
+  top: 62px;
+  left: 14px;
+  display: flex;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: rgba(255, 250, 240, 0.9);
+  box-shadow: var(--shadow);
+  font-size: 24px;
+  pointer-events: none;
+}
+.keys span { filter: grayscale(1) opacity(0.35); transition: filter 0.4s, transform 0.4s; }
+.keys span.got { filter: drop-shadow(0 0 4px #ffcc33); transform: scale(1.15); }
+@media (pointer: coarse) {
+  .daypanel { top: 120px; }
+}
 .hint {
   position: absolute;
   bottom: 24px;
@@ -136,6 +163,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   font-weight: 700;
   box-shadow: var(--shadow);
   pointer-events: none;
+  max-width: calc(100vw - 32px);
+  width: max-content;
+  text-align: center;
+  text-wrap: balance;
 }
 .banner.show { animation: banner 3s ease forwards; }
 @keyframes banner {

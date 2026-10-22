@@ -27,7 +27,7 @@ function showTitle() {
   mode = new TitleScreen(startGame);
 }
 
-function startGame(seed, characterId) {
+function startGame(seed, characterId, gameMode) {
   mode.dispose();
   mode = null;
   setUrlSeed(seed);
@@ -35,7 +35,7 @@ function startGame(seed, characterId) {
   // let the loading message paint before the (synchronous) world build
   requestAnimationFrame(() =>
     setTimeout(() => {
-      mode = new Game(seed, characterId, showTitle, renderer.domElement);
+      mode = new Game(seed, characterId, showTitle, renderer.domElement, gameMode);
       loading.classList.remove('show');
     }, 30),
   );

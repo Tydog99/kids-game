@@ -42,6 +42,7 @@ export class TitleScreen {
     });
 
     this.selected = load('character', 'boy');
+    this.gameMode = load('mode', 'explore') === 'treasure' ? 'treasure' : 'explore';
     const seed = seedFromUrl() || load('seed', '') || randomSeed();
 
     this.el = document.createElement('div');
@@ -51,6 +52,10 @@ export class TitleScreen {
       <div class="spacer"></div>
       <div class="cards">
         ${Object.entries(CHARACTERS).map(([id, c]) => `<button class="card" data-id="${id}">${c.label}</button>`).join('')}
+      </div>
+      <div class="modes" role="radiogroup" aria-label="Game mode">
+        <button class="mode" data-mode="explore" role="radio">🌍 Explore</button>
+        <button class="mode" data-mode="treasure" role="radio">🗝️ Treasure Hunt</button>
       </div>
       <div class="seed-row">
         <label for="seed">World</label>
@@ -68,7 +73,8 @@ export class TitleScreen {
       const s = input.value.trim() || randomSeed();
       save('seed', s);
       save('character', this.selected);
-      onPlay(s, this.selected);
+      save('mode', this.gameMode);
+      onPlay(s, this.selected, this.gameMode);
     };
     this.el.querySelector('.play').onclick = play;
     this.onKey = (e) => {
@@ -78,8 +84,18 @@ export class TitleScreen {
       if (e.code === 'ArrowRight') this.select('girl');
     };
     addEventListener('keydown', this.onKey);
+    this.el.querySelectorAll('.mode').forEach((b) => (b.onclick = () => this.setMode(b.dataset.mode)));
+    this.setMode(this.gameMode);
     this.select(this.selected);
     this.resize();
+  }
+
+  setMode(m) {
+    this.gameMode = m;
+    this.el.querySelectorAll('.mode').forEach((b) => {
+      b.classList.toggle('selected', b.dataset.mode === m);
+      b.setAttribute('aria-checked', String(b.dataset.mode === m));
+    });
   }
 
   select(id) {
@@ -94,7 +110,7 @@ export class TitleScreen {
     // pull back on narrow (portrait) screens so both characters fit
     const d = a < 1 ? 5.2 / a : 5.2;
     this.camera.position.set(0, 1.6, d);
-    this.camera.lookAt(0, 0.45, 0);
+    this.camera.lookAt(0, 0.2, 0);
     this.camera.updateProjectionMatrix();
   }
 

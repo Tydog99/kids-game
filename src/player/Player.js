@@ -3,8 +3,9 @@ import { PlayerMotor } from './PlayerMotor.js';
 import { Character } from './Character.js';
 
 export class Player {
-  constructor(world, characterId, isWalkable) {
-    this.motor = new PlayerMotor(world.spawn, isWalkable);
+  // start: { x, z, facing } tile to begin on
+  constructor(start, characterId, isWalkable) {
+    this.motor = new PlayerMotor(start, isWalkable);
     this.character = new Character(characterId);
     this.object = this.character.root;
     this.groundY = 0.25;

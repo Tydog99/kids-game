@@ -10,6 +10,7 @@ export class Hud {
       <button class="pill seed" title="Copy this world's seed to share it">🌍 <span></span></button>
       <button class="pill exit">New World</button>
       <div class="banner"></div>
+      <div class="keys" hidden></div>
       <div class="daypanel">
         <div class="setting">
           <div class="setting-head"><label for="dayspeed">☀️ Sun speed</label><output for="dayspeed"></output></div>
@@ -41,6 +42,7 @@ export class Hud {
 
     this.hint = this.el.querySelector('.hint');
     this.banner = this.el.querySelector('.banner');
+    this.keys = this.el.querySelector('.keys');
     this.input = input;
     for (const b of this.el.querySelectorAll('.dpad button')) {
       const a = b.dataset.a;
@@ -76,11 +78,21 @@ export class Hud {
     setTimeout(() => (span.textContent = old), 1400);
   }
 
-  showBanner(text) {
+  // important banners (treasure hunt news) aren't replaced by town-name banners for a few seconds
+  showBanner(text, important = false) {
+    const now = performance.now();
+    if (!important && now < (this.importantUntil ?? 0)) return;
+    if (important) this.importantUntil = now + 3500;
     this.banner.textContent = text;
     this.banner.classList.remove('show');
     void this.banner.offsetWidth; // restart the animation
     this.banner.classList.add('show');
+  }
+
+  showKeys(count, total) {
+    this.keys.hidden = false;
+    this.keys.innerHTML = Array.from({ length: total }, (_, i) => `<span class="${i < count ? 'got' : ''}">🔑</span>`).join('');
+    this.keys.setAttribute('aria-label', `${count} of ${total} golden keys`);
   }
 
   update() {

@@ -1,12 +1,15 @@
 // One play session: a generated world, the player and the follow camera.
 import * as THREE from 'three';
-import { generateWorld, isWalkable, tileAt, TREE_KIND, TOWN_HALF } from './worldgen.js';
+import { generateWorld, isWalkable, tileAt, TREE_KIND, TOWN_HALF, DIRS } from './worldgen.js';
 import { T } from './tiles.js';
 import { WorldRenderer } from './world/WorldRenderer.js';
 import { Player } from './player/Player.js';
 import { Input } from './player/input.js';
 import { FollowCamera } from './camera/FollowCamera.js';
 import { Hud } from './ui/Hud.js';
+import { placeTreasure, TreasureHunt } from './treasure.js';
+import { TreasureView } from './world/TreasureView.js';
+import { RADIUS as PLAYER_RADIUS } from './player/PlayerMotor.js';
 import { addLights, SKY } from './scene.js';
 import { createRng } from './rng.js';
 import { DayCycle } from './world/DayCycle.js';
@@ -20,8 +23,15 @@ const TOWN_PREFIX = ['Maple', 'Pebble', 'Ember', 'Mossy', 'Sunny', 'Acorn', 'Wil
 const TOWN_SUFFIX = ['Town', 'Village', 'Hollow', 'Meadow', 'City'];
 
 export class Game {
-  constructor(seed, characterId, onExit, canvas) {
+  // mode: 'explore' or 'treasure'
+  constructor(seed, characterId, onExit, canvas, mode = 'explore') {
     this.world = generateWorld(seed);
+    this.mode = mode;
+    if (mode === 'treasure') {
+      this.hunt = new TreasureHunt(placeTreasure(this.world));
+      const c = this.hunt.chest;
+      this.chestTile = c.z * this.world.width + c.x;
+    }
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(SKY);
     this.scene.fog = new THREE.Fog(SKY, 18, 40);
@@ -31,7 +41,7 @@ export class Game {
     this.worldView = new WorldRenderer(this.world);
     this.scene.add(this.worldView.group);
 
-    this.player = new Player(this.world, characterId, (x, z) => this.walkable(x, z));
+    this.player = new Player(this.startTile(), characterId, (x, z) => this.walkable(x, z));
     this.scene.add(this.player.object);
     this.playerView = new THREE.Vector3();
     this.follow = new FollowCamera(this.camera, (x, z) => tileAt(this.world, x, z) === T.BUILDING);
@@ -61,6 +71,12 @@ export class Game {
     });
 
     this.setupDragToOrbit(canvas);
+
+    if (this.hunt) {
+      this.treasureView = new TreasureView(this.scene, this.hunt);
+      this.hud.showKeys(0, this.hunt.keys.length);
+      this.hud.showBanner('Find the 3 golden keys! Follow the beams of light', true);
+    }
 
     const nameRng = createRng(`${seed}:names`);
     const prefixes = [...TOWN_PREFIX];
@@ -107,10 +123,21 @@ export class Game {
     };
   }
 
+  // Start a couple of steps out from the store door, so the camera has room behind the
+  // player instead of being squeezed under the store's awning.
+  startTile() {
+    const { x, z, facing } = this.world.spawn;
+    const [dx, dz] = DIRS[facing];
+    let steps = 0;
+    while (steps < 2 && this.walkable(x + dx * (steps + 1), z + dz * (steps + 1)) === true) steps++;
+    return { x: x + dx * steps, z: z + dz * steps, facing };
+  }
+
   // Oak tiles are open except for the trunk, so you can walk under the canopy.
   // Trees in the border wall stay solid so nobody walks off the map.
   walkable(x, z) {
     const w = this.world;
+    if (z * w.width + x === this.chestTile && x >= 0 && x < w.width) return false;
     const border = x < 2 || z < 2 || x >= w.width - 2 || z >= w.height - 2;
     if (!border && tileAt(w, x, z) === T.TREE && w.treeKind[z * w.width + x] === TREE_KIND.OAK) return OAK_TRUNK_RADIUS;
     return isWalkable(w, x, z);
@@ -131,6 +158,7 @@ export class Game {
     this.worldView.update(t);
 
     const m = this.player.motor;
+    if (this.hunt) this.updateHunt(dt, t, m);
     const town = this.townAt(m.x, m.z);
     if (town !== this.currentTown) {
       if (town) this.hud.showBanner(town.name);
@@ -138,6 +166,25 @@ export class Game {
       this.currentTown = town;
     }
     this.hud.update();
+  }
+
+  updateHunt(dt, t, m) {
+    for (const e of this.hunt.update(dt, m.px, m.pz, PLAYER_RADIUS)) {
+      if (e.type === 'key') {
+        this.treasureView.collectKey(e.key);
+        this.hud.showKeys(e.count, this.hunt.keys.length);
+        if (e.count < this.hunt.keys.length) this.hud.showBanner(`Golden key ${e.count} of ${this.hunt.keys.length}!`, true);
+      } else if (e.type === 'allKeys') {
+        this.treasureView.showChestBeam();
+        this.hud.showBanner('All 3 keys! Head back to the treasure chest', true);
+      } else if (e.type === 'locked') {
+        this.hud.showBanner(e.missing === 1 ? 'Locked! Find 1 more golden key' : `Locked! Find ${e.missing} more golden keys`, true);
+      } else if (e.type === 'open') {
+        this.treasureView.open();
+        this.hud.showBanner('You opened the treasure!', true);
+      }
+    }
+    this.treasureView.update(dt, t, this.camera);
   }
 
   resize() {
@@ -148,6 +195,7 @@ export class Game {
   dispose() {
     this.input.dispose();
     this.removeDrag();
+    this.treasureView?.dispose();
     this.dayCycle.dispose();
     this.hud.dispose();
     this.worldView.dispose();
