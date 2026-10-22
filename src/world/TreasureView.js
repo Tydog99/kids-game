@@ -15,7 +15,7 @@ const POUR_SECONDS = 6;
 
 function beamMaterial(color) {
   return new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: 1 }, uTime: { value: 0 } },
+    uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: 1 }, uTime: { value: 0 }, uStrength: { value: 1 } },
     vertexShader: `
       varying float vH;
       varying float vEdge;
@@ -30,27 +30,47 @@ function beamMaterial(color) {
       uniform vec3 uColor;
       uniform float uOpacity;
       uniform float uTime;
+      uniform float uStrength;
       varying float vH;
       varying float vEdge;
       void main() {
         float core = pow(vEdge, 2.0);
-        float fade = pow(1.0 - vH, 0.7);
+        float fade = pow(1.0 - vH, 0.7) * (1.0 + 0.6 * smoothstep(0.03, 0.0, vH));
         float shimmer = 0.85 + 0.15 * sin(vH * 120.0 - uTime * 6.0);
-        gl_FragColor = vec4(uColor * (0.45 + 0.55 * core) * shimmer, core * fade * uOpacity * 0.85);
+        gl_FragColor = vec4(uColor * (0.85 + 0.35 * core) * shimmer, min(1.0, core * fade * uOpacity * uStrength));
       }`,
+    // normal (not additive) blending keeps the beam gold against a bright daytime sky
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
   });
 }
 
+// Column of light: widest at the ground, tapering toward the sky.
 function makeBeam(color, radius = BEAM_RADIUS) {
-  const geo = new THREE.CylinderGeometry(radius, radius, BEAM_HEIGHT, 16, 1, true);
+  const geo = new THREE.CylinderGeometry(radius * 0.35, radius, BEAM_HEIGHT, 16, 1, true);
   geo.translate(0, BEAM_HEIGHT / 2, 0);
   const mesh = new THREE.Mesh(geo, beamMaterial(color));
   mesh.frustumCulled = false;
   mesh.renderOrder = 3;
+  return mesh;
+}
+
+// Soft round pool of light lying on the ground.
+function makeGlowPool(color, radius, opacity) {
+  const mesh = new THREE.Mesh(
+    new THREE.CircleGeometry(radius, 40),
+    new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: opacity } },
+      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv;
+        void main() { float r = length(vUv - 0.5) * 2.0; float a = pow(max(0.0, 1.0 - r), 1.8); gl_FragColor = vec4(uColor, a * uOpacity); }`,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  mesh.rotation.x = -Math.PI / 2;
   return mesh;
 }
 
@@ -87,16 +107,7 @@ export class TreasureView {
     this.halo.material.uniforms.uOpacity.value = 0.45;
     this.chest.add(this.halo);
     // soft pool of golden light on the ground around the chest
-    this.pool = new THREE.Mesh(new THREE.CircleGeometry(3.2, 40), new THREE.ShaderMaterial({
-      uniforms: { uColor: { value: new THREE.Color('#ffc93d') }, uOpacity: { value: 0.6 } },
-      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: `uniform vec3 uColor; uniform float uOpacity; varying vec2 vUv;
-        void main() { float r = length(vUv - 0.5) * 2.0; float a = pow(max(0.0, 1.0 - r), 1.8); gl_FragColor = vec4(uColor, a * uOpacity); }`,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    }));
-    this.pool.rotation.x = -Math.PI / 2;
+    this.pool = makeGlowPool('#ffc93d', 3.2, 0.6);
     this.pool.position.y = 0.01 - 1 / 16;
     this.chest.add(this.pool);
     this.group.add(this.chest);
@@ -115,7 +126,10 @@ export class TreasureView {
       mesh.position.set(k.x + 0.5, GROUND + 0.9, k.z + 0.5);
       mesh.scale.setScalar(1.3);
       this.group.add(mesh);
-      return { data: k, mesh, beam: this.addBeam(k.x, k.z, '#ffd23f'), phase: i * 2.1, gone: 0 };
+      const pool = makeGlowPool('#ffc93d', 1.4, 0.55);
+      pool.position.set(k.x + 0.5, GROUND + 0.01, k.z + 0.5);
+      this.group.add(pool);
+      return { data: k, mesh, pool, beam: this.addBeam(k.x, k.z, '#ffd23f'), phase: i * 2.1, gone: 0 };
     });
 
     // --- coins ---
@@ -139,15 +153,20 @@ export class TreasureView {
   }
 
   // Keep a beam visible at any distance: past the view range, slide it toward the camera and
-  // shrink it by the same factor (it looks identical), and never let it get too thin.
+  // shrink it by the same factor (so the top looks the same), and never let it get too thin.
+  // Its foot always stands on the ground at the edge of the visible world, so it meets the
+  // horizon instead of hanging in the sky.
   placeBeam(beam, camera) {
     const base = beam.userData.base;
     const cam = camera.position;
     const d = Math.hypot(base.x - cam.x, base.z - cam.z);
     const s = d > BEAM_MAX_DIST ? BEAM_MAX_DIST / d : 1;
     const widen = Math.max(1, (d * MIN_BEAM_ANGLE) / BEAM_RADIUS);
-    beam.position.set(cam.x + (base.x - cam.x) * s, cam.y + (base.y - cam.y) * s, cam.z + (base.z - cam.z) * s);
-    beam.scale.set(s * widen, s, s * widen);
+    const top = cam.y + (base.y + BEAM_HEIGHT - cam.y) * s; // where the real beam's top appears
+    beam.position.set(cam.x + (base.x - cam.x) * s, base.y, cam.z + (base.z - cam.z) * s);
+    beam.scale.set(s * widen, (top - base.y) / BEAM_HEIGHT, s * widen);
+    // see-through up close (so the key shows inside it), solid when far away and thin
+    beam.material.uniforms.uStrength.value = Math.min(1.1, 0.45 + d / 60);
   }
 
   collectKey(key) {
@@ -181,8 +200,10 @@ export class TreasureView {
         m.rotation.y += dt * 18;
         m.scale.setScalar(1.3 * (1 - k.gone));
         k.beam.material.uniforms.uOpacity.value = 1 - k.gone;
+        k.pool.material.uniforms.uOpacity.value = 0.55 * (1 - k.gone);
         if (k.gone >= 1) {
           m.visible = false;
+          k.pool.visible = false;
           k.beam.visible = false;
         }
       } else {
