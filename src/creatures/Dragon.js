@@ -145,6 +145,10 @@ export class Dragon {
     this.groundY = groundY;
   }
 
+  dispose() {
+    this.breath?.dispose();
+  }
+
   breathe(seconds = 2) {
     this.breathTime = Math.max(this.breathTime, seconds);
   }

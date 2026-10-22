@@ -14,7 +14,7 @@ function seedFromUrl() {
 }
 
 export class TitleScreen {
-  constructor(onPlay) {
+  constructor(onPlay, onOptions = () => {}) {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(SKY);
     this.camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 50);
@@ -48,6 +48,7 @@ export class TitleScreen {
     this.el = document.createElement('div');
     this.el.className = 'overlay title';
     this.el.innerHTML = `
+      <button class="options-btn" type="button">⚙️ Options</button>
       <h1>Voxel <span>Explorer</span></h1>
       <div class="spacer"></div>
       <div class="cards">
@@ -77,7 +78,9 @@ export class TitleScreen {
       onPlay(s, this.selected, this.gameMode);
     };
     this.el.querySelector('.play').onclick = play;
+    this.el.querySelector('.options-btn').onclick = onOptions;
     this.onKey = (e) => {
+      if (this.suspended || document.querySelector('.options-menu')) return;
       if (e.code === 'Enter') play();
       if (e.target.tagName === 'INPUT') return;
       if (e.code === 'ArrowLeft') this.select('boy');
@@ -96,6 +99,17 @@ export class TitleScreen {
       b.classList.toggle('selected', b.dataset.mode === m);
       b.setAttribute('aria-checked', String(b.dataset.mode === m));
     });
+  }
+
+  // Hide while another screen (like Dragon Designs) is open on top.
+  suspend() {
+    this.suspended = true;
+    this.el.hidden = true;
+  }
+
+  resume() {
+    this.suspended = false;
+    this.el.hidden = false;
   }
 
   select(id) {

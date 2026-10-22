@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import './ui/style.css';
 import { TitleScreen } from './ui/TitleScreen.js';
 import { Game } from './Game.js';
+import { DragonViewer } from './creatures/DragonViewer.js';
+import { openOptionsMenu } from './ui/OptionsMenu.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -24,7 +26,7 @@ function setUrlSeed(seed) {
 
 function showTitle() {
   mode?.dispose();
-  mode = new TitleScreen(startGame);
+  mode = new TitleScreen(startGame, openOptions);
 }
 
 function startGame(seed, characterId, gameMode) {
@@ -35,10 +37,29 @@ function startGame(seed, characterId, gameMode) {
   // let the loading message paint before the (synchronous) world build
   requestAnimationFrame(() =>
     setTimeout(() => {
-      mode = new Game(seed, characterId, showTitle, renderer.domElement, gameMode);
+      mode = new Game(seed, characterId, showTitle, renderer.domElement, gameMode, openOptions);
       loading.classList.remove('show');
     }, 30),
   );
+}
+
+function openOptions() {
+  openOptionsMenu({ onDragons: openDragons });
+}
+
+// Dragon Designs opens on top of whatever is running; Back returns to it exactly as it was.
+function openDragons() {
+  const previous = mode;
+  previous.suspend();
+  mode = new DragonViewer({
+    canvas: renderer.domElement,
+    onBack: () => {
+      mode.dispose();
+      mode = previous;
+      previous.resume();
+      previous.resize();
+    },
+  });
 }
 
 addEventListener('resize', () => {

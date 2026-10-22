@@ -1,56 +1,57 @@
-/* Layout: full-bleed 3D stage, title floating top-left, pose switch + design cards docked at the bottom. */
-:root {
-  --sky: #9fdcff;
-  --ink: #1f2a44;
-  --cream: #fffaf0;
-  --sun: #f5d33b;
-  --muted: #4a5470;
-  --display: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
-  --shadow: 0 4px 0 rgba(0, 0, 0, 0.22);
-}
-
-* { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; }
-body {
-  background: var(--sky);
-  color: var(--ink);
-  font-family: var(--display);
-  overflow: hidden;
-}
-#stage { position: fixed; inset: 0; }
-#stage canvas { display: block; cursor: grab; }
-#stage canvas:active { cursor: grabbing; }
-
-.top {
+/* Dragon Designs viewer. Layout: full-bleed 3D stage behind, title floating top-left,
+   pose switch and design cards docked at the bottom. Scoped to .dragon-viewer so it can sit
+   inside the game without touching the game's own styles. */
+.dragon-viewer {
+  --dv-ink: #1f2a44;
+  --dv-cream: #fffaf0;
+  --dv-sun: #f5d33b;
+  --dv-flame: #ff7a3c;
+  --dv-muted: #4a5470;
+  --dv-display: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif;
+  --dv-shadow: 0 4px 0 rgba(0, 0, 0, 0.22);
   position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--dv-ink);
+  font-family: var(--dv-display);
+  z-index: 5;
+}
+.dragon-viewer button {
+  font: inherit;
+  color: var(--dv-ink);
+  cursor: pointer;
+  border: 3px solid var(--dv-ink);
+  border-radius: 14px;
+  background: var(--dv-cream);
+  box-shadow: var(--dv-shadow);
+  pointer-events: auto;
+}
+.dragon-viewer button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22); }
+.dragon-viewer button:focus-visible { outline: 3px solid var(--dv-sun); outline-offset: 2px; }
+
+.dv-top {
+  position: absolute;
   top: 0;
   left: 0;
-  padding-block: 14px 0;
+  max-width: 560px;
+  padding-block: max(14px, env(safe-area-inset-top, 0px)) 0;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  max-width: 560px;
-  pointer-events: none;
 }
-.top h1 {
+.dv-back { padding: 4px 14px; font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.dv-top h1 {
   margin: 0;
   font-size: clamp(30px, 5vw, 46px);
   font-weight: 700;
   color: #fff;
-  text-shadow: 0 3px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink);
+  text-shadow: 0 3px 0 var(--dv-ink), 2px 0 0 var(--dv-ink), -2px 0 0 var(--dv-ink), 0 -2px 0 var(--dv-ink);
   text-wrap: balance;
 }
-.top h1 span { color: var(--sun); }
-.top p {
-  margin: 6px 0 0;
-  max-width: 46ch;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--ink);
-  line-height: 1.35;
-}
+.dv-top h1 span { color: var(--dv-sun); }
+.dv-top p { margin: 6px 0 0; max-width: 46ch; font-size: 15px; font-weight: 500; line-height: 1.35; }
 
-.dock {
-  position: fixed;
+.dv-dock {
+  position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
@@ -61,38 +62,22 @@ body {
   padding-block: 0 max(14px, env(safe-area-inset-bottom, 0px));
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  pointer-events: none;
 }
-.dock > * { pointer-events: auto; }
+.dv-poses { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.dv-poses button { padding: 6px 16px; font-size: 18px; font-weight: 700; }
+.dv-poses button.selected { background: var(--dv-sun); }
+.dragon-viewer .dv-breathe { background: var(--dv-flame); color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
 
-button {
-  font: inherit;
-  color: var(--ink);
-  cursor: pointer;
-  border: 3px solid var(--ink);
-  border-radius: 14px;
-  background: var(--cream);
-  box-shadow: var(--shadow);
-}
-button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.22); }
-button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
-
-.poses { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.poses button { padding: 6px 16px; font-size: 18px; font-weight: 700; }
-.poses button.selected { background: var(--sun); }
-.poses .breathe { background: #ff7a3c; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
-
-.cards {
+.dv-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 260px));
   gap: 10px;
   width: 100%;
   justify-content: center;
 }
-.card {
+.dragon-viewer .dv-card {
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto auto;
   column-gap: 10px;
   align-items: center;
   padding: 10px 12px;
@@ -100,27 +85,26 @@ button:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
   background: rgba(255, 250, 240, 0.92);
   min-width: 0;
 }
-.card.selected { background: #fff3bf; }
-.swatch {
+.dragon-viewer .dv-card.selected { background: #fff3bf; }
+.dv-swatch {
   grid-row: 1 / span 2;
   width: 34px;
   height: 34px;
-  border: 3px solid var(--ink);
+  border: 3px solid var(--dv-ink);
   border-radius: 8px;
   background: linear-gradient(135deg, var(--swatch) 0 55%, var(--swatch2) 55% 100%);
 }
-.name { font-size: 20px; font-weight: 700; line-height: 1.1; }
-.tag { font-size: 13px; color: var(--muted); font-weight: 500; }
-.blurb { grid-column: 1 / -1; margin-top: 6px; font-size: 13px; line-height: 1.3; font-weight: 400; }
+.dv-name { font-size: 20px; font-weight: 700; line-height: 1.1; }
+.dv-tag { font-size: 13px; color: var(--dv-muted); font-weight: 500; }
+.dv-blurb { grid-column: 1 / -1; margin-top: 6px; font-size: 13px; line-height: 1.3; font-weight: 400; }
 
 @media (max-width: 720px) {
-  .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .card { grid-template-columns: 1fr; padding: 6px 8px; }
-  .swatch { display: none; }
-  .tag, .blurb { display: none; }
-  .name { font-size: 16px; text-align: center; }
-  .top p { font-size: 13px; }
+  .dv-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .dragon-viewer .dv-card { grid-template-columns: 1fr; padding: 6px 8px; }
+  .dv-swatch, .dv-tag, .dv-blurb { display: none; }
+  .dv-name { font-size: 16px; text-align: center; }
+  .dv-top p { font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  button:active { transform: none; }
+  .dragon-viewer button:active { transform: none; }
 }

@@ -24,7 +24,8 @@ const TOWN_SUFFIX = ['Town', 'Village', 'Hollow', 'Meadow', 'City'];
 
 export class Game {
   // mode: 'explore' or 'treasure'
-  constructor(seed, characterId, onExit, canvas, mode = 'explore') {
+  // onOptions: opens the Options menu (from the HUD button)
+  constructor(seed, characterId, onExit, canvas, mode = 'explore', onOptions = () => {}) {
     this.world = generateWorld(seed);
     this.mode = mode;
     if (mode === 'treasure') {
@@ -59,6 +60,7 @@ export class Game {
     this.hud = new Hud({
       seed,
       onExit,
+      onOptions,
       input: this.input,
       dayIndex,
       onDaySpeed: (i) => {
@@ -97,7 +99,7 @@ export class Game {
   setupDragToOrbit(canvas) {
     let lastX = 0;
     const down = (e) => {
-      if (e.button !== 0 && e.button !== 2) return;
+      if (this.suspended || (e.button !== 0 && e.button !== 2)) return;
       this.follow.dragging = true;
       lastX = e.clientX;
       canvas.setPointerCapture(e.pointerId);
@@ -197,6 +199,19 @@ export class Game {
   resize() {
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
+  }
+
+  // Pause while another screen (like Dragon Designs) is open on top; everything is kept.
+  suspend() {
+    this.suspended = true;
+    this.hud.el.hidden = true;
+  }
+
+  resume() {
+    this.suspended = false;
+    this.hud.el.hidden = false;
+    this.input.onBlur(); // forget keys that were held while away
+    this.input.clearTaps();
   }
 
   dispose() {

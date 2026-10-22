@@ -8,23 +8,15 @@
     <meta name="claude:viewport-fit-sides" content="cover" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&display=swap" rel="stylesheet" />
+    <style>
+      html, body { height: 100%; margin: 0; overflow: hidden; background: #9fdcff; }
+      #stage { position: fixed; inset: 0; }
+      #stage canvas { display: block; cursor: grab; }
+      #stage canvas:active { cursor: grabbing; }
+    </style>
   </head>
   <body>
     <div id="stage"></div>
-    <header class="top">
-      <h1>Dragon <span>Designs</span></h1>
-      <p>Three dragons for Voxel Explorer. Each one walks on all fours, rears up on its back legs, flies, and breathes fire, ice or diamonds. Drag to look around.</p>
-    </header>
-    <section class="dock">
-      <div class="poses" role="radiogroup" aria-label="Pose">
-        <button data-mode="auto" role="radio">Auto</button>
-        <button data-mode="walk" role="radio">Walk</button>
-        <button data-mode="rear" role="radio">Rear up</button>
-        <button data-mode="fly" role="radio">Fly</button>
-        <button class="breathe" type="button" title="Space bar">Breathe!</button>
-      </div>
-      <div class="cards"></div>
-    </section>
     <script type="module" src="/src/dragonViewer.js"></script>
   </body>
 </html>

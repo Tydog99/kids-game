@@ -3,13 +3,16 @@ import { METEOR_RATES } from '../world/shootingStars.js';
 
 // In-game overlay: seed/share, new world, controls hint, town banner, touch d-pad.
 export class Hud {
-  constructor({ seed, onExit, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate }) {
+  constructor({ seed, onExit, onOptions, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate }) {
     this.onDebugChange = null;
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
     this.el.innerHTML = `
       <button class="pill seed" title="Copy this world's seed to share it">🌍 <span></span></button>
-      <button class="pill exit">New World</button>
+      <div class="top-right">
+        <button class="pill options" type="button">⚙️ Options</button>
+        <button class="pill exit">New World</button>
+      </div>
       <div class="banner"></div>
       <div class="keys" hidden></div>
       <div class="daypanel">
@@ -39,6 +42,7 @@ export class Hud {
         .catch(() => this.flash(seedBtn, seed));
     };
     this.el.querySelector('.exit').onclick = onExit;
+    this.el.querySelector('.options').onclick = onOptions;
     this.slider('#dayspeed', dayIndex, (i) => formatDayLength(DAY_LENGTHS[i]), onDaySpeed);
     this.slider('#meteors', meteorIndex, (i) => METEOR_RATES[i].label, onMeteorRate);
 
