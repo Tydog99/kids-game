@@ -14,7 +14,7 @@ export class Hud {
         <input id="dayspeed" type="range" min="0" max="${DAY_LENGTHS.length - 1}" step="1" />
         <output for="dayspeed"></output>
       </div>
-      <div class="hint">⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn</div>
+      <div class="hint">⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around</div>
       <div class="dpad">
         <button data-a="forward">▲</button><button data-a="left">◀</button>
         <button data-a="right">▶</button><button data-a="back">▼</button>

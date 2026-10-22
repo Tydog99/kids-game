@@ -60,10 +60,15 @@ export class PlayerMotor {
     return moved;
   }
 
+  // isWalkable(tx, tz) returns true (open), false (solid tile) or a number: the radius of a
+  // round obstacle in the middle of an otherwise open tile (a tree trunk you can walk around).
   fits(x, z) {
     for (let tz = Math.floor(z - RADIUS); tz <= Math.floor(z + RADIUS); tz++)
-      for (let tx = Math.floor(x - RADIUS); tx <= Math.floor(x + RADIUS); tx++)
-        if (!this.isWalkable(tx, tz)) return false;
+      for (let tx = Math.floor(x - RADIUS); tx <= Math.floor(x + RADIUS); tx++) {
+        const w = this.isWalkable(tx, tz);
+        if (w === false) return false;
+        if (typeof w === 'number' && Math.hypot(x - tx - 0.5, z - tz - 0.5) < w + RADIUS) return false;
+      }
     return true;
   }
 

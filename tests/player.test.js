@@ -73,4 +73,13 @@ describe('PlayerMotor', () => {
     expect(m.turnRate).toBe(0);
     expect(m.stride).toBe(0);
   });
+
+  it('can walk under a tree canopy right up to the trunk, but not through it', () => {
+    const trunk = 0.16;
+    const tree = (x, z) => (x === 5 && z === 7 ? trunk : true);
+    const m = new PlayerMotor({ x: 5, z: 5, facing: 2 }, tree); // walking south into the tree tile
+    run(m, 3, { ...NONE, forward: true });
+    expect(m.z).toBe(7); // inside the tree's tile, under the leaves
+    expect(Math.hypot(m.px - 5.5, m.pz - 7.5)).toBeGreaterThanOrEqual(trunk + RADIUS - 1e-6);
+  });
 });

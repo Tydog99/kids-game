@@ -15,34 +15,50 @@ function blob(g, rng, cx, cy, cz, rx, ry, rz, colors) {
       }
 }
 
+// Oaks have a tall bare trunk and a wide canopy that overhangs the next tiles,
+// so the player can walk underneath the leaves.
 export function oakTree(variant = 0) {
   const rng = createRng(variant + 11);
   const g = new VoxelGrid();
-  const h = rng.int(4, 6);
+  const h = rng.int(12, 13); // canopy starts above the player's head, even on the smallest scaled oaks
   g.box(3, 0, 3, 4, h, 4, (x, y, z) => TRUNK[(x + y + z) % 2]);
-  blob(g, rng, 3, h + 3, 3, 3, 3, 3, LEAVES);
-  blob(g, rng, 5, h + 2, 4, 2, 2, 2, LEAVES);
-  blob(g, rng, 2, h + 2, 5, 2, 2, 2, LEAVES);
-  // a few red apples on some trees
-  if (variant % 3 === 0) for (let i = 0; i < 4; i++) g.set(rng.int(0, 7), h + rng.int(1, 4), 7, '#d6312b');
+  // a couple of branches reaching out into the canopy
+  for (const [dx, dz] of [[1, 0], [-1, 1]]) {
+    for (let i = 1; i <= 2; i++) g.set(3.5 + dx * (i + 0.5) | 0, h - 2 + i, 3.5 + dz * (i + 0.5) | 0, TRUNK[0]);
+  }
+  blob(g, rng, 3, h + 3, 3, 6, 3, 6, LEAVES);
+  blob(g, rng, 8, h + 3, 5, 3, 2, 3, LEAVES);
+  blob(g, rng, 0, h + 3, 8, 3, 2, 3, LEAVES);
+  blob(g, rng, -1, h + 3, -1, 3, 2, 3, LEAVES);
+  blob(g, rng, 4, h + 5, 2, 4, 2, 4, LEAVES);
+  // a few red apples on the outside of some trees
+  if (variant % 3 === 0) {
+    const leaves = g.voxels().filter((v) => v.y > h + 1 && (v.x <= -1 || v.x >= 8 || v.z <= -1 || v.z >= 8));
+    for (let i = 0; i < 6 && leaves.length; i++) {
+      const v = leaves[rng.int(0, leaves.length - 1)];
+      g.set(v.x, v.y, v.z, '#d6312b');
+    }
+  }
   return g;
 }
 
 export function pineTree(variant = 0) {
   const rng = createRng(variant + 23);
   const g = new VoxelGrid();
-  g.box(3, 0, 3, 4, 3, 4, TRUNK[0]);
-  let y = 3;
-  for (const r of [4, 3, 3, 2, 2, 1, 1, 0]) {
-    for (let dy = 0; dy < 2; dy++, y++) {
-      g.box(3 - r, y, 3 - r, 4 + r, y, 4 + r, (x, yy, z) => {
-        const corner = (x === 3 - r || x === 4 + r) && (z === 3 - r || z === 4 + r);
-        return corner && r > 1 ? null : rng.pick(PINE);
+  g.box(3, 0, 3, 4, 6, 4, TRUNK[0]);
+  let y = 5;
+  for (const r of [5, 4, 4, 3, 3, 2, 2, 1, 1, 0]) {
+    const layers = r >= 2 ? 3 : 2;
+    for (let dy = 0; dy < layers; dy++, y++) {
+      const rr = dy === layers - 1 && r > 1 ? r - 1 : r; // step in at the top of each tier
+      g.box(3 - rr, y, 3 - rr, 4 + rr, y, 4 + rr, (x, yy, z) => {
+        const corner = (x === 3 - rr || x === 4 + rr) && (z === 3 - rr || z === 4 + rr);
+        return corner && rr > 1 ? null : rng.pick(PINE);
       });
     }
-    if (r <= 1) y--;
+    y--;
   }
-  g.set(3, y, 3, PINE[0]).set(4, y, 4, PINE[1]);
+  g.set(3, y + 1, 3, PINE[0]).set(4, y + 1, 4, PINE[1]);
   return g;
 }
 

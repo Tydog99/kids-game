@@ -16,6 +16,8 @@ export class FollowCamera {
     this.focus = new THREE.Vector3();
     this.look = new THREE.Vector3();
     this.dist = DIST;
+    this.orbit = 0; // extra angle around the player from dragging
+    this.dragging = false;
     this.first = true;
   }
 
@@ -27,7 +29,19 @@ export class FollowCamera {
     return DIST;
   }
 
-  update(dt, target, yaw) {
+  // Mouse/touch drag swings the camera around the player at the same height.
+  // Returns to behind the player once they start walking again.
+  addOrbit(radians) {
+    this.orbit += radians;
+  }
+
+  update(dt, target, yaw, moving = false) {
+    if (moving && !this.dragging && this.orbit) {
+      this.orbit = Math.atan2(Math.sin(this.orbit), Math.cos(this.orbit)); // shortest way back
+      this.orbit *= Math.exp(-2.5 * dt);
+      if (Math.abs(this.orbit) < 0.002) this.orbit = 0;
+    }
+    yaw += this.orbit;
     const k = this.first ? 1 : 1 - Math.exp(-14 * dt);
     this.focus.lerp(target, k);
     // trail the player's turn slightly so turning feels smooth, not rigid

@@ -35,7 +35,7 @@ function startGame(seed, characterId) {
   // let the loading message paint before the (synchronous) world build
   requestAnimationFrame(() =>
     setTimeout(() => {
-      mode = new Game(seed, characterId, showTitle);
+      mode = new Game(seed, characterId, showTitle, renderer.domElement);
       loading.classList.remove('show');
     }, 30),
   );

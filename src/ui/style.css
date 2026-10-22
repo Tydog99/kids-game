@@ -22,6 +22,8 @@ html, body {
 }
 
 canvas { display: block; }
+canvas.orbit { cursor: grab; }
+canvas.orbit.dragging { cursor: grabbing; }
 
 button {
   font: inherit;

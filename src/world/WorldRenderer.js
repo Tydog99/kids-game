@@ -82,6 +82,35 @@ class BoxBatch {
   }
 }
 
+// Trees dissolve (dithered) where they would hide the player: right next to the camera,
+// and along the line from the camera to the player. Shadows are unaffected.
+function makeTreeMaterial() {
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  mat.userData.uniforms = { uPlayerView: { value: new THREE.Vector3(0, 0, -1000) } };
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uPlayerView = mat.userData.uniforms.uPlayerView;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vViewPos;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvViewPos = mvPosition.xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vViewPos;\nuniform vec3 uPlayerView;')
+      .replace(
+        'void main() {',
+        `void main() {
+          float keep = smoothstep(0.8, 2.2, length(vViewPos));
+          vec3 toPlayer = normalize(uPlayerView);
+          float along = dot(vViewPos, toPlayer);
+          if (along < length(uPlayerView) - 0.3) {
+            float side = length(vViewPos - toPlayer * along);
+            keep = min(keep, smoothstep(0.45, 0.85, side));
+          }
+          float noise = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453);
+          if (keep < noise) discard;`,
+      );
+  };
+  return mat;
+}
+
 function makeLiquidMaterial(opts) {
   const mat = new THREE.MeshLambertMaterial({ vertexColors: true, ...opts });
   mat.userData.uniforms = { uTime: { value: 0 } };
@@ -202,6 +231,7 @@ export class WorldRenderer {
   }
 
   buildTrees() {
+    this.treeMat = makeTreeMaterial();
     const w = this.world;
     const geos = {};
     for (const [kind, variants] of Object.entries(TREE_VARIANTS)) {
@@ -220,7 +250,7 @@ export class WorldRenderer {
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
     const up = new THREE.Vector3(0, 1, 0);
     for (const { kind, v, list } of buckets.values()) {
-      const mesh = new THREE.InstancedMesh(geos[kind][v], voxelMaterial, list.length);
+      const mesh = new THREE.InstancedMesh(geos[kind][v], this.treeMat, list.length);
       list.forEach((o, i) => {
         const r = o.variant;
         q.setFromAxisAngle(up, ((r >> 3) % 4) * (Math.PI / 2));
@@ -251,6 +281,11 @@ export class WorldRenderer {
     }
   }
 
+  // Where the player is, in the camera's view space (used to see through trees).
+  setPlayerView(viewPos) {
+    this.treeMat.userData.uniforms.uPlayerView.value.copy(viewPos);
+  }
+
   update(time) {
     this.waterMat.userData.uniforms.uTime.value = time;
     this.lavaMat.userData.uniforms.uTime.value = time;
@@ -261,6 +296,7 @@ export class WorldRenderer {
     this.group.traverse((o) => o.geometry?.dispose());
     this.waterMat.dispose();
     this.lavaMat.dispose();
+    this.treeMat.dispose();
   }
 }
 
