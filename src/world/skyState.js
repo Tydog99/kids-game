@@ -49,6 +49,7 @@ export function skyState(phase) {
     sunSkyDir: skyPathDir(phase),
     moonSkyDir: skyPathDir(phase + 0.5),
     day,
+    sunset: sunsetAmt,
     light,
     sky: mixRgb(mixRgb(SKY_NIGHT, SKY_DAY, day), SKY_SUNSET, sunsetAmt),
     hemi: {

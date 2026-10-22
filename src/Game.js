@@ -11,6 +11,7 @@ import { addLights, SKY } from './scene.js';
 import { createRng } from './rng.js';
 import { DayCycle } from './world/DayCycle.js';
 import { DAY_LENGTHS, DEFAULT_DAY_INDEX } from './world/skyState.js';
+import { METEOR_RATES, DEFAULT_METEOR_INDEX } from './world/shootingStars.js';
 import { load, save } from './ui/storage.js';
 
 const OAK_TRUNK_RADIUS = 0.16;
@@ -35,9 +36,14 @@ export class Game {
     this.playerView = new THREE.Vector3();
     this.follow = new FollowCamera(this.camera, (x, z) => tileAt(this.world, x, z) === T.BUILDING);
     this.input = new Input();
-    const saved = Number(load('daySpeed', DEFAULT_DAY_INDEX));
-    const dayIndex = Number.isInteger(saved) && saved >= 0 && saved < DAY_LENGTHS.length ? saved : DEFAULT_DAY_INDEX;
+    const savedIndex = (key, fallback, count) => {
+      const n = Number(load(key, fallback));
+      return Number.isInteger(n) && n >= 0 && n < count ? n : fallback;
+    };
+    const dayIndex = savedIndex('daySpeed', DEFAULT_DAY_INDEX, DAY_LENGTHS.length);
+    const meteorIndex = savedIndex('meteors', DEFAULT_METEOR_INDEX, METEOR_RATES.length);
     this.dayCycle = new DayCycle(this.scene, this.lights, { dayLength: DAY_LENGTHS[dayIndex] });
+    this.dayCycle.shootingStars.perSecond = METEOR_RATES[meteorIndex].perSecond;
     this.hud = new Hud({
       seed,
       onExit,
@@ -46,6 +52,11 @@ export class Game {
       onDaySpeed: (i) => {
         this.dayCycle.dayLength = DAY_LENGTHS[i];
         save('daySpeed', String(i));
+      },
+      meteorIndex,
+      onMeteorRate: (i) => {
+        this.dayCycle.shootingStars.perSecond = METEOR_RATES[i].perSecond;
+        save('meteors', String(i));
       },
     });
 

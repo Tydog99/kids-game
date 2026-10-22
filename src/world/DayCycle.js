@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { skyState } from './skyState.js';
 import { VoxelGrid } from '../voxel/VoxelGrid.js';
 import { buildGeometry } from '../voxel/builder.js';
+import { Clouds } from './Clouds.js';
+import { ShootingStars } from './ShootingStars.js';
 
 const SKY_DISTANCE = 34; // how far away the sun/moon/stars are drawn (inside the camera's far plane)
 const LIGHT_DISTANCE = 20;
@@ -48,6 +50,8 @@ export class DayCycle {
     this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: '#ffffff', size: 2, sizeAttenuation: false, transparent: true, fog: false, depthWrite: false }));
 
     scene.add(this.sun, this.moon, this.stars);
+    this.clouds = new Clouds(scene);
+    this.shootingStars = new ShootingStars(scene);
     this.center = new THREE.Vector3();
   }
 
@@ -81,9 +85,13 @@ export class DayCycle {
     this.stars.position.copy(c);
     this.stars.material.opacity = s.stars;
     this.stars.visible = s.stars > 0.01;
+    this.clouds.update(dt, camera, s.day, s.sunset);
+    this.shootingStars.update(dt, camera, s.stars);
   }
 
   dispose() {
+    this.clouds.dispose();
+    this.shootingStars.dispose();
     for (const o of [this.sun, this.moon, this.stars, this.halo]) {
       o.geometry.dispose();
       o.material.dispose();

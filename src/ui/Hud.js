@@ -1,8 +1,9 @@
 import { DAY_LENGTHS, formatDayLength } from '../world/skyState.js';
+import { METEOR_RATES } from '../world/shootingStars.js';
 
 // In-game overlay: seed/share, new world, controls hint, town banner, touch d-pad.
 export class Hud {
-  constructor({ seed, onExit, input, dayIndex, onDaySpeed }) {
+  constructor({ seed, onExit, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate }) {
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
     this.el.innerHTML = `
@@ -10,9 +11,14 @@ export class Hud {
       <button class="pill exit">New World</button>
       <div class="banner"></div>
       <div class="daypanel">
-        <label for="dayspeed">☀️ Sun speed</label>
-        <input id="dayspeed" type="range" min="0" max="${DAY_LENGTHS.length - 1}" step="1" />
-        <output for="dayspeed"></output>
+        <div class="setting">
+          <div class="setting-head"><label for="dayspeed">☀️ Sun speed</label><output for="dayspeed"></output></div>
+          <input id="dayspeed" type="range" min="0" max="${DAY_LENGTHS.length - 1}" step="1" />
+        </div>
+        <div class="setting">
+          <div class="setting-head"><label for="meteors">🌠 Shooting stars</label><output for="meteors"></output></div>
+          <input id="meteors" type="range" min="0" max="${METEOR_RATES.length - 1}" step="1" />
+        </div>
       </div>
       <div class="hint">⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around</div>
       <div class="dpad">
@@ -30,19 +36,8 @@ export class Hud {
         .catch(() => this.flash(seedBtn, seed));
     };
     this.el.querySelector('.exit').onclick = onExit;
-    const slider = this.el.querySelector('#dayspeed');
-    const readout = this.el.querySelector('.daypanel output');
-    slider.value = dayIndex;
-    readout.textContent = formatDayLength(DAY_LENGTHS[dayIndex]);
-    slider.addEventListener('input', () => {
-      const i = Number(slider.value);
-      readout.textContent = formatDayLength(DAY_LENGTHS[i]);
-      onDaySpeed(i);
-    });
-    // hand the arrow keys back to walking once the slider is let go
-    const release = () => slider.blur();
-    slider.addEventListener('pointerup', release);
-    slider.addEventListener('change', release);
+    this.slider('#dayspeed', dayIndex, (i) => formatDayLength(DAY_LENGTHS[i]), onDaySpeed);
+    this.slider('#meteors', meteorIndex, (i) => METEOR_RATES[i].label, onMeteorRate);
 
     this.hint = this.el.querySelector('.hint');
     this.banner = this.el.querySelector('.banner');
@@ -56,6 +51,22 @@ export class Hud {
       b.addEventListener('pointerleave', up);
       b.addEventListener('pointercancel', up);
     }
+  }
+
+  slider(selector, value, label, onChange) {
+    const input = this.el.querySelector(selector);
+    const readout = this.el.querySelector(`output[for="${input.id}"]`);
+    input.value = value;
+    readout.textContent = label(value);
+    input.addEventListener('input', () => {
+      const i = Number(input.value);
+      readout.textContent = label(i);
+      onChange(i);
+    });
+    // hand the arrow keys back to walking once the slider is let go
+    const release = () => input.blur();
+    input.addEventListener('pointerup', release);
+    input.addEventListener('change', release);
   }
 
   flash(btn, text) {
