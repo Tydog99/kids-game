@@ -1,0 +1,161 @@
+:root {
+  --ink: #1f2a44;
+  --cream: #fffaf0;
+  --blue: #2f7fd6;
+  --red: #e2483a;
+  --yellow: #f5d33b;
+  --shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #9fdcff;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  color: var(--ink);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+canvas { display: block; }
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: var(--cream);
+  box-shadow: var(--shadow);
+  transition: transform 0.08s;
+}
+button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
+.overlay { position: fixed; inset: 0; pointer-events: none; }
+.overlay > * { pointer-events: auto; }
+
+/* ---------- title ---------- */
+.title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 28px;
+  gap: 14px;
+}
+.title h1 {
+  margin: 0;
+  font-size: clamp(36px, 8vw, 72px);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  text-shadow: 0 4px 0 var(--ink), 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 -3px 0 var(--ink);
+  pointer-events: none;
+}
+.title h1 span { color: var(--yellow); }
+.title .spacer { flex: 1; pointer-events: none; }
+.cards { display: flex; gap: clamp(40px, 14vw, 160px); }
+.card {
+  min-width: 120px;
+  padding: 10px 22px;
+  font-size: 26px;
+  font-weight: 700;
+  background: rgba(255, 250, 240, 0.85);
+}
+.card.selected { background: var(--yellow); }
+.seed-row { display: flex; align-items: center; gap: 8px; max-width: 100%; }
+.seed-row label { font-weight: 700; font-size: 20px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
+.seed-row input {
+  font: inherit;
+  font-size: 20px;
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  width: min(280px, 55vw);
+  background: var(--cream);
+  color: var(--ink);
+  user-select: text;
+}
+.dice { font-size: 22px; padding: 6px 10px; }
+.play {
+  font-size: 34px;
+  font-weight: 700;
+  padding: 10px 56px;
+  background: var(--red);
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- loading ---------- */
+.loading {
+  display: none;
+  place-items: center;
+  background: #9fdcff;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 3px 0 var(--ink);
+}
+.loading.show { display: grid; }
+
+/* ---------- hud ---------- */
+.pill { position: absolute; top: 14px; padding: 6px 14px; font-size: 18px; font-weight: 500; }
+.pill.seed { left: 14px; max-width: calc(100vw - 180px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill.exit { right: 14px; }
+.hint {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(31, 42, 68, 0.75);
+  color: #fff;
+  font-size: 18px;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 1.2s 2s;
+}
+.hint.fade { opacity: 0; }
+.banner {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translate(-50%, -140px);
+  padding: 10px 28px;
+  border: 4px solid var(--ink);
+  border-radius: 12px;
+  background: var(--cream);
+  font-size: 26px;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+.banner.show { animation: banner 3s ease forwards; }
+@keyframes banner {
+  0% { transform: translate(-50%, -140px); }
+  12%, 80% { transform: translate(-50%, 0); }
+  100% { transform: translate(-50%, -140px); }
+}
+
+.dpad {
+  display: none;
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  width: 180px;
+  height: 180px;
+}
+.dpad button { position: absolute; width: 60px; height: 60px; font-size: 24px; background: rgba(255, 250, 240, 0.85); touch-action: none; }
+.dpad [data-a='forward'] { left: 60px; top: 0; }
+.dpad [data-a='left'] { left: 0; top: 60px; }
+.dpad [data-a='right'] { right: 0; top: 60px; }
+.dpad [data-a='back'] { left: 60px; bottom: 0; }
+@media (pointer: coarse) {
+  .dpad { display: block; }
+  .hint { display: none; }
+}
