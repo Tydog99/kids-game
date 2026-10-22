@@ -13,16 +13,24 @@ document.getElementById('app').appendChild(renderer.domElement);
 const loading = document.getElementById('loading');
 let mode;
 
+// Keep the current world in the URL hash so a reload returns to it.
+function setUrlSeed(seed) {
+  try {
+    history.replaceState(null, '', `${location.pathname}#${encodeURIComponent(seed)}`);
+  } catch {
+    /* some embeds disallow URL changes */
+  }
+}
+
 function showTitle() {
   mode?.dispose();
-  history.replaceState(null, '', location.pathname + location.search);
   mode = new TitleScreen(startGame);
 }
 
 function startGame(seed, characterId) {
   mode.dispose();
   mode = null;
-  history.replaceState(null, '', `?seed=${encodeURIComponent(seed)}`);
+  setUrlSeed(seed);
   loading.classList.add('show');
   // let the loading message paint before the (synchronous) world build
   requestAnimationFrame(() =>

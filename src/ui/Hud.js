@@ -4,7 +4,7 @@ export class Hud {
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
     this.el.innerHTML = `
-      <button class="pill seed" title="Copy a link to this world">🌍 <span></span></button>
+      <button class="pill seed" title="Copy this world's seed to share it">🌍 <span></span></button>
       <button class="pill exit">New World</button>
       <div class="banner"></div>
       <div class="hint">⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn</div>
@@ -16,14 +16,11 @@ export class Hud {
     document.body.appendChild(this.el);
     const seedBtn = this.el.querySelector('.seed');
     seedBtn.querySelector('span').textContent = seed;
-    seedBtn.onclick = async () => {
-      const url = `${location.origin}${location.pathname}?seed=${encodeURIComponent(seed)}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        this.flash(seedBtn, 'Link copied!');
-      } catch {
-        this.flash(seedBtn, seed);
-      }
+    seedBtn.onclick = () => {
+      navigator.clipboard
+        .writeText(seed)
+        .then(() => this.flash(seedBtn, 'Seed copied!'))
+        .catch(() => this.flash(seedBtn, seed));
     };
     this.el.querySelector('.exit').onclick = onExit;
     this.hint = this.el.querySelector('.hint');

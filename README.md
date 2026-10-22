@@ -11,7 +11,8 @@ npm run dev        # open the printed localhost URL
 ```
 
 `npm run build` makes a static site in `dist/`, which can be hosted anywhere
-(GitHub Pages, Netlify, or any web server).
+(GitHub Pages, Netlify, or any web server). `npm run build:single` writes
+`dist-single/voxel-explorer.html`, the whole game in one self-contained file.
 
 ## Controls
 
@@ -26,8 +27,8 @@ Touch screens get an on-screen D-pad.
 ## Worlds & seeds
 
 Every world comes from a **seed** (the text box on the title screen). The same
-seed always builds the same world. Click the 🌍 seed button in-game to copy a
-link to the world you're in, for example `?seed=pallet`.
+seed always builds the same world. Click the 🌍 seed button in-game to copy the
+seed. A link can also open a world directly: `?seed=pallet` or `#pallet`.
 
 ## Code tour
 

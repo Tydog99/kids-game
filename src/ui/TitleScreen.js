@@ -6,6 +6,13 @@ import { addLights, SKY } from '../scene.js';
 import { randomSeed } from '../rng.js';
 import { load, save } from './storage.js';
 
+// A seed can come from ?seed=name or #name (the hash form works inside embeds).
+function seedFromUrl() {
+  const q = new URLSearchParams(location.search).get('seed');
+  const h = decodeURIComponent(location.hash.slice(1));
+  return q || h || '';
+}
+
 export class TitleScreen {
   constructor(onPlay) {
     this.scene = new THREE.Scene();
@@ -34,9 +41,8 @@ export class TitleScreen {
       this.chars[id] = c;
     });
 
-    const params = new URLSearchParams(location.search);
     this.selected = load('character', 'boy');
-    const seed = params.get('seed') || load('seed', '') || randomSeed();
+    const seed = seedFromUrl() || load('seed', '') || randomSeed();
 
     this.el = document.createElement('div');
     this.el.className = 'overlay title';
