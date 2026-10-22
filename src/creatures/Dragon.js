@@ -10,15 +10,20 @@ import { Breath } from './Breath.js';
 const POSES = {
   walk: {
     lift: 0, pitch: 0, neck: -0.55, neckBend: -0.08, head: 0.75, tailLift: 0.12, tailCurl: -0.04, tailSway: 0.18,
-    gait: 1, fold: 1, flap: 0, backLeg: 0, frontLeg: 0, paw: 0, wingRaise: 0,
+    gait: 1, fold: 1, flap: 0, backLeg: 0, frontLeg: 0, paw: 0, wingRaise: 0, crouch: 0,
   },
   rear: {
     lift: 0.1, pitch: -0.95, neck: 0.15, neckBend: -0.02, head: 0.75, tailLift: 0.92, tailCurl: 0.03, tailSway: 0.06,
-    gait: 0, fold: 0.25, flap: 0.22, backLeg: -0.12, frontLeg: -0.65, paw: 1, wingRaise: 0.35,
+    gait: 0, fold: 0.25, flap: 0.22, backLeg: -0.12, frontLeg: -0.65, paw: 1, wingRaise: 0.35, crouch: 0,
   },
   fly: {
     lift: 2.2, pitch: -0.08, neck: -0.25, neckBend: -0.03, head: 0.3, tailLift: -0.08, tailCurl: 0.03, tailSway: 0.1,
-    gait: 0, fold: 0, flap: 1, backLeg: 1.15, frontLeg: 0.95, paw: 0, wingRaise: 0.1,
+    gait: 0, fold: 0, flap: 1, backLeg: 1.15, frontLeg: 0.95, paw: 0, wingRaise: 0.1, crouch: 0,
+  },
+  // sitting like a dog: hips down, back legs folded under, chest up on straight front legs
+  sit: {
+    lift: 0, pitch: -0.4, neck: -0.25, neckBend: -0.05, head: 0.6, tailLift: 0.33, tailCurl: 0.06, tailSway: 0.03,
+    gait: 0, fold: 1, flap: 0, backLeg: -1.1, frontLeg: 0.4, paw: 0, wingRaise: 0, crouch: 1,
   },
 };
 
@@ -170,7 +175,9 @@ export class Dragon {
     const w = this.walkPhase, f = this.flapPhase;
 
     // whole body: hover and bob when flying, small step bob when walking
-    this.body.position.y = p.lift + Math.sin(f + Math.PI) * 0.12 * p.flap + Math.abs(Math.sin(w)) * 0.03 * p.gait;
+    // crouch lowers the hips by part of the back leg's length (used when sitting)
+    const crouch = p.crouch * this.spec.backLeg.len * V * 0.45;
+    this.body.position.y = p.lift - crouch + Math.sin(f + Math.PI) * 0.12 * p.flap + Math.abs(Math.sin(w)) * 0.03 * p.gait;
     this.hips.rotation.x = p.pitch + Math.sin(f) * 0.05 * p.flap + Math.sin(t * 2) * 0.02 * p.paw;
     this.hips.rotation.z = Math.sin(w) * 0.03 * p.gait;
 

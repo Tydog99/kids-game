@@ -13,6 +13,8 @@ import { RADIUS as PLAYER_RADIUS } from './player/PlayerMotor.js';
 import { addLights, SKY } from './scene.js';
 import { createRng } from './rng.js';
 import { DayCycle } from './world/DayCycle.js';
+import { WorldDragons } from './world/WorldDragons.js';
+import { MAX_DRAGONS } from './creatures/dragonSpawns.js';
 import { DAY_LENGTHS, DEFAULT_DAY_INDEX } from './world/skyState.js';
 import { METEOR_RATES, DEFAULT_METEOR_INDEX } from './world/shootingStars.js';
 import { load, save } from './ui/storage.js';
@@ -55,6 +57,7 @@ export class Game {
     };
     const dayIndex = savedIndex('daySpeed', DEFAULT_DAY_INDEX, DAY_LENGTHS.length);
     const meteorIndex = savedIndex('meteors', DEFAULT_METEOR_INDEX, METEOR_RATES.length);
+    const dragonCount = savedIndex('dragons', 3, MAX_DRAGONS + 1);
     this.dayCycle = new DayCycle(this.scene, this.skyScene, this.lights, { dayLength: DAY_LENGTHS[dayIndex] });
     this.dayCycle.shootingStars.perSecond = METEOR_RATES[meteorIndex].perSecond;
     this.hud = new Hud({
@@ -67,6 +70,11 @@ export class Game {
         this.dayCycle.dayLength = DAY_LENGTHS[i];
         save('daySpeed', String(i));
       },
+      dragonCount,
+      onDragonCount: (n) => {
+        this.dragons.setCount(n);
+        save('dragons', String(n));
+      },
       meteorIndex,
       onMeteorRate: (i) => {
         this.dayCycle.shootingStars.perSecond = METEOR_RATES[i].perSecond;
@@ -75,6 +83,10 @@ export class Game {
     });
 
     this.setupDragToOrbit(canvas);
+
+    // dragons roam where they have open ground (no trees, water, buildings or the chest)
+    this.dragons = new WorldDragons(this.scene, this.world, (x, z) => this.walkable(x, z) === true);
+    this.dragons.setCount(dragonCount);
 
     if (this.hunt) {
       this.treasureView = new TreasureView(this.scene, this.hunt);
@@ -165,6 +177,7 @@ export class Game {
     this.playerView.set(p.x, p.y + 0.7, p.z).applyMatrix4(this.camera.matrixWorldInverse);
     this.worldView.setPlayerView(this.playerView);
     this.worldView.update(t);
+    this.dragons.update(dt);
 
     const m = this.player.motor;
     if (this.hunt) this.updateHunt(dt, t, m);
@@ -217,6 +230,7 @@ export class Game {
   dispose() {
     this.input.dispose();
     this.removeDrag();
+    this.dragons.dispose();
     this.treasureView?.dispose();
     this.dayCycle.dispose();
     this.hud.dispose();

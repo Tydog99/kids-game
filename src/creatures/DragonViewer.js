@@ -7,7 +7,7 @@ import { Dragon } from './Dragon.js';
 import { DRAGONS } from './dragonModels.js';
 import { addLights, SKY } from '../scene.js';
 
-const AUTO = ['walk', 'rear', 'walk', 'fly'];
+const AUTO = ['walk', 'rear', 'sit', 'walk', 'fly'];
 // dragons in a row; three-quarter views so each breath shoots out in front of its neighbor
 const LAYOUT = {
   ember: { x: -6.4, z: 0.6, turn: -0.3, size: 1 },
@@ -60,7 +60,7 @@ export class DragonViewer {
 
     this.onKey = (e) => {
       if (e.target.tagName === 'INPUT') return;
-      const m = { Digit1: 'walk', Digit2: 'rear', Digit3: 'fly', Digit0: 'auto' }[e.code];
+      const m = { Digit1: 'walk', Digit2: 'rear', Digit3: 'fly', Digit4: 'sit', Digit0: 'auto' }[e.code];
       if (m) this.setMode(m);
       if (e.code === 'Space') {
         e.preventDefault();
@@ -86,6 +86,7 @@ export class DragonViewer {
           <button data-mode="auto" role="radio">Auto</button>
           <button data-mode="walk" role="radio">Walk</button>
           <button data-mode="rear" role="radio">Rear up</button>
+          <button data-mode="sit" role="radio">Sit</button>
           <button data-mode="fly" role="radio">Fly</button>
           <button class="dv-breathe" type="button" title="Space bar">Breathe!</button>
         </div>
@@ -154,7 +155,7 @@ export class DragonViewer {
       const before = this.autoTimer;
       this.autoTimer += dt;
       // breathe a moment into the rear-up and flying poses
-      if (AUTO[this.autoIndex] !== 'walk' && before < 1 && this.autoTimer >= 1) this.dragons.forEach((d) => d.breathe(1.8));
+      if ((AUTO[this.autoIndex] === 'rear' || AUTO[this.autoIndex] === 'fly') && before < 1 && this.autoTimer >= 1) this.dragons.forEach((d) => d.breathe(1.8));
       if (this.autoTimer > 3.6) {
         this.autoTimer = 0;
         this.autoIndex = (this.autoIndex + 1) % AUTO.length;
