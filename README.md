@@ -11,8 +11,11 @@ npm run dev        # open the printed localhost URL
 ```
 
 `npm run build` makes a static site in `dist/`, which can be hosted anywhere
-(GitHub Pages, Netlify, or any web server). `npm run build:single` writes
-`dist-single/voxel-explorer.html`, the whole game in one self-contained file.
+(GitHub Pages, Netlify, or any web server). `npm run build:single` writes each page
+(`voxel-explorer.html` and `dragon-designs.html`) to `dist-single/` as one self-contained file.
+
+`/dragons.html` is a viewer for the three dragon designs (Ember, Glimmer, Frost): switch
+between walking, rearing up and flying, and drag to look around.
 
 ## Controls
 
@@ -42,5 +45,6 @@ seed. A link can also open a world directly: `?seed=pallet` or `#pallet`.
 | `src/player/` | Grid movement (`PlayerMotor`), keyboard input, and the animated character. |
 | `src/camera/FollowCamera.js` | Third-person camera directly behind the player. |
 | `src/ui/` | Title screen, HUD, styles. |
+| `src/creatures/` | Dragon designs (`dragonModels.js`) and their rig and poses (`Dragon.js`). |
 
 `npm test` runs the unit tests (world generation, movement, voxel grid, RNG).

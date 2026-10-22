@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "build:single": "vite build && node scripts/build-single.mjs"
+    "build:single": "node scripts/build-single.mjs"
   },
   "dependencies": {
     "simplex-noise": "^4.0.3",
