@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { T, TILE_INFO } from '../tiles.js';
 import { TREE_KIND } from '../worldgen.js';
 import { createRng } from '../rng.js';
-import { buildGeometry, voxelMaterial } from '../voxel/builder.js';
+import { buildGeometry, buildGreedyGeometry, voxelMaterial } from '../voxel/builder.js';
 import { oakTree, pineTree, deadTree } from '../voxel/models/trees.js';
 import { house, store } from '../voxel/models/buildings.js';
 
@@ -269,7 +269,7 @@ export class WorldRenderer {
   buildBuildings() {
     for (const b of this.world.buildings) {
       const grid = b.type === 'store' ? store(b.variant) : house(b.variant);
-      const mesh = new THREE.Mesh(buildGeometry(grid, { size: V }), voxelMaterial);
+      const mesh = new THREE.Mesh(buildGreedyGeometry(grid, { size: V }), voxelMaterial);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       mesh.position.set(-b.w / 2, 0, -b.d / 2);

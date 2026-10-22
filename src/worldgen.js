@@ -1,11 +1,11 @@
 // Seed → tile grid + objects. Pure (no three.js) so it can be unit tested.
 import { createNoise2D } from 'simplex-noise';
 import { createRng } from './rng.js';
-import { T, isWalkableTile } from './tiles.js';
+import { T, isWalkableTile, BUILDING_SIZE } from './tiles.js';
 
 export const WORLD_SIZE = 128;
 const BORDER = 2;
-const TOWN_HALF = 7; // town area is 14x14 tiles
+export const TOWN_HALF = 12; // town area is 24x24 tiles
 
 // Facing / direction convention shared with the player: 0=N(-z) 1=E(+x) 2=S(+z) 3=W(-x)
 export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
@@ -64,14 +64,14 @@ export function generateWorld(seed, size = WORLD_SIZE) {
   const lo = BORDER + TOWN_HALF + 2, hi = W - BORDER - TOWN_HALF - 3;
   for (let attempt = 0; attempt < 400 && towns.length < wantTowns; attempt++) {
     const cx = rng.int(lo, hi), cz = rng.int(lo, hi);
-    if (towns.some((t) => Math.hypot(t.cx - cx, t.cz - cz) < 34)) continue;
+    if (towns.some((t) => Math.hypot(t.cx - cx, t.cz - cz) < 44)) continue;
     let good = 0, total = 0;
     forTownArea(cx, cz, (x, z) => {
       total++;
       const t = tiles[idx(x, z)];
       if (t === T.GRASS || t === T.TALL_GRASS || t === T.TREE || t === T.SAND) good++;
     });
-    if (good / total < 0.85) continue;
+    if (good / total < 0.8) continue;
     towns.push({ cx, cz });
   }
   if (towns.length === 0) towns.push({ cx: W >> 1, cz: H >> 1 }); // always at least one
@@ -139,8 +139,8 @@ export function generateWorld(seed, size = WORLD_SIZE) {
 
     const plan = ['store', ...Array(rng.int(2, 5)).fill('house')];
     for (const type of plan) {
-      const w = type === 'store' ? 4 : 3, d = 3;
-      for (let tries = 0; tries < 60; tries++) {
+      const { w, d } = BUILDING_SIZE[type];
+      for (let tries = 0; tries < 150; tries++) {
         const x0 = rng.int(cx - TOWN_HALF, cx + TOWN_HALF - w);
         const z0 = rng.int(cz - TOWN_HALF, cz + TOWN_HALF - d);
         const north = z0 + d <= cz; // building sits north of the main road → door faces south

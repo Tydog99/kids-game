@@ -24,3 +24,9 @@ export const TILE_INFO = {
 };
 
 export const isWalkableTile = (t) => TILE_INFO[t].walkable;
+
+// Building footprints in tiles. The door sits in the middle of the front (+z) side.
+export const BUILDING_SIZE = {
+  house: { w: 5, d: 5 },
+  store: { w: 7, d: 5 },
+};

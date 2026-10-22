@@ -62,3 +62,80 @@ export function buildMesh(grid, opts) {
   mesh.receiveShadow = true;
   return mesh;
 }
+
+// Greedy meshing: merges touching faces of the same color that face the same way into
+// one big rectangle. Far fewer triangles for big flat models like buildings. Colors are
+// used as-is (no per-voxel jitter), so give large surfaces texture with patterns instead.
+export function buildGreedyGeometry(grid, { size = 1, origin = [0, 0, 0] } = {}) {
+  const b = grid.bounds();
+  const lo = [b.minX, b.minY, b.minZ];
+  const dims = [b.maxX - b.minX + 1, b.maxY - b.minY + 1, b.maxZ - b.minZ + 1];
+  // dense color volume, 0 = empty, otherwise color + 1
+  const vol = new Uint32Array(dims[0] * dims[1] * dims[2]);
+  const at = (x, y, z) =>
+    x < 0 || y < 0 || z < 0 || x >= dims[0] || y >= dims[1] || z >= dims[2] ? 0 : vol[x + dims[0] * (y + dims[1] * z)];
+  for (const v of grid.map.values()) vol[v.x - lo[0] + dims[0] * (v.y - lo[1] + dims[1] * (v.z - lo[2]))] = v.color + 1;
+
+  const pos = [], nor = [], col = [], index = [];
+  const color = new THREE.Color();
+  let vi = 0;
+  for (const f of FACES) {
+    const d = f.n.findIndex((c) => c !== 0); // axis the face points along
+    const s = f.n[d];
+    const u = (d + 1) % 3, v = (d + 2) % 3;
+    const mask = new Int32Array(dims[u] * dims[v]);
+    const p = [0, 0, 0];
+    for (p[d] = 0; p[d] < dims[d]; p[d]++) {
+      // which voxels in this slice have an exposed face in direction n
+      let k = 0;
+      for (p[v] = 0; p[v] < dims[v]; p[v]++)
+        for (p[u] = 0; p[u] < dims[u]; p[u]++, k++) {
+          const c = at(p[0], p[1], p[2]);
+          const q = [p[0], p[1], p[2]];
+          q[d] += s;
+          mask[k] = c && !at(q[0], q[1], q[2]) ? c : 0;
+        }
+      // grow rectangles
+      for (let j = 0; j < dims[v]; j++)
+        for (let i = 0; i < dims[u]; ) {
+          const c = mask[i + j * dims[u]];
+          if (!c) { i++; continue; }
+          let w = 1;
+          while (i + w < dims[u] && mask[i + w + j * dims[u]] === c) w++;
+          let h = 1;
+          grow: for (; j + h < dims[v]; h++)
+            for (let x = 0; x < w; x++) if (mask[i + x + (j + h) * dims[u]] !== c) break grow;
+          for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) mask[i + x + (j + y) * dims[u]] = 0;
+
+          // emit quad on the face plane
+          const plane = p[d] + (s > 0 ? 1 : 0);
+          const corner = (cu, cv) => {
+            const r = [0, 0, 0];
+            r[d] = plane; r[u] = cu; r[v] = cv;
+            return [(r[0] + lo[0] - origin[0]) * size, (r[1] + lo[1] - origin[1]) * size, (r[2] + lo[2] - origin[2]) * size];
+          };
+          let quad = [corner(i, j), corner(i + w, j), corner(i + w, j + h), corner(i, j + h)];
+          // keep counter-clockwise winding as seen from outside
+          const e1 = quad[1].map((a, n) => a - quad[0][n]), e2 = quad[2].map((a, n) => a - quad[0][n]);
+          const cross = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+          if (cross[0] * f.n[0] + cross[1] * f.n[1] + cross[2] * f.n[2] < 0) quad = quad.reverse();
+          color.setHex(c - 1).multiplyScalar(f.shade);
+          for (const q of quad) {
+            pos.push(...q);
+            nor.push(...f.n);
+            col.push(color.r, color.g, color.b);
+          }
+          index.push(vi, vi + 1, vi + 2, vi, vi + 2, vi + 3);
+          vi += 4;
+          i += w;
+        }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(vi > 65535 ? new THREE.Uint32BufferAttribute(index, 1) : new THREE.Uint16BufferAttribute(index, 1));
+  geo.computeBoundingSphere();
+  return geo;
+}
