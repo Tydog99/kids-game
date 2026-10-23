@@ -42,7 +42,8 @@ export class TitleScreen {
     });
 
     this.selected = load('character', 'boy');
-    this.gameMode = load('mode', 'explore') === 'treasure' ? 'treasure' : 'explore';
+    // (older saves called these 'treasure' and 'explore')
+    this.gameMode = ['adventure', 'treasure'].includes(load('mode', 'adventure')) ? 'adventure' : 'free';
     const seed = seedFromUrl() || load('seed', '') || randomSeed();
 
     this.el = document.createElement('div');
@@ -55,8 +56,8 @@ export class TitleScreen {
         ${Object.entries(CHARACTERS).map(([id, c]) => `<button class="card" data-id="${id}">${c.label}</button>`).join('')}
       </div>
       <div class="modes" role="radiogroup" aria-label="Game mode">
-        <button class="mode" data-mode="explore" role="radio">🌍 Explore</button>
-        <button class="mode" data-mode="treasure" role="radio">🗝️ Treasure Hunt</button>
+        <button class="mode" data-mode="adventure" role="radio">🐉 Adventure</button>
+        <button class="mode" data-mode="free" role="radio">🌍 Free Play</button>
       </div>
       <div class="seed-row">
         <label for="seed">World</label>

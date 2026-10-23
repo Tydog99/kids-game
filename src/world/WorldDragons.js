@@ -48,6 +48,8 @@ export class WorldDragon {
     this.summon = null; // flying over to the player: { phase, spot, timer }
     this.waiting = 0; // seconds left waiting by the player after being called
     this.motor = null; // RideMotor while ridden
+    this.skyOnly = false; // adventure chapter 1: stays up in the sky, never lands
+    this.restSpot = null; // adventure: where it lands and waits for the player
     const { center, radii } = this.dragon.spec.torso;
     this.bodyOffset = center[2] * V * this.scale; // body center, ahead of the hips
     this.bodyHalf = radii[2] * V * this.scale * 0.55;
@@ -96,7 +98,9 @@ export class WorldDragon {
     }
     if (activity === 'fly') {
       this.dragon.setMode('fly');
-      const height = CRUISE[0] + this.rng.next() * (CRUISE[1] - CRUISE[0]);
+      // sky-only dragons (adventure chapter 1) fly lower, where the camera can see them
+      const [lo, hi] = this.skyOnly ? [3.5, 5] : CRUISE;
+      const height = lo + this.rng.next() * (hi - lo);
       // a dragon that starts the game mid-flight is already up in the air
       this.flight = { phase: first ? 'cruise' : 'takeoff', height };
       if (first) this.y = GROUND + height;
@@ -125,7 +129,12 @@ export class WorldDragon {
     return true;
   }
 
-  pickFlyTarget() {
+  pickFlyTarget(player) {
+    // sky-only dragons often swoop over the player, so they get noticed
+    if (this.skyOnly && player && this.rng.next() < 0.85) {
+      const a = this.rng.next() * Math.PI * 2, r = 6 + this.rng.next() * 12;
+      return { x: player.x + Math.sin(a) * r, z: player.z + Math.cos(a) * r };
+    }
     const m = 8;
     return {
       x: m + this.rng.next() * (this.world.width - 2 * m),
@@ -157,6 +166,11 @@ export class WorldDragon {
   // player: { x, z, speed } (null while the player is riding this dragon)
   update(dt, player) {
     if (this.motor) return this.finish(dt);
+    if (this.skyOnly && !this.flight) {
+      // take off (or, at the very start, already be up there) and stay in the air
+      this.brain.index = 3; // 'fly'
+      this.enter('fly', this.y > GROUND + 1);
+    }
     if (this.summon) {
       this.updateSummon(dt, player);
       return this.finish(dt);
@@ -261,13 +275,13 @@ export class WorldDragon {
       this.y = Math.min(GROUND + f.height, this.y + 2.2 * dt);
       if (this.y >= GROUND + f.height - 0.01) f.phase = 'cruise';
     } else if (f.phase === 'cruise') {
-      if (!this.target) this.target = this.pickFlyTarget();
+      if (!this.target) this.target = this.pickFlyTarget(player);
       const left = this.steer(dt, this.target.x, this.target.z, FLY_SPEED, 0.9);
       if (left < 2) this.target = null;
       this.y += (GROUND + f.height - this.y) * Math.min(1, dt);
       // occasionally a burst of breath in flight (not toward the player)
       if (!this.dragon.breathing && this.rng.next() < dt * 0.06 && !this.playerInFront(player, 12)) this.dragon.breathe(1.2);
-      if (this.brain.timeLeft <= 0) f.phase = 'landing';
+      if (this.brain.timeLeft <= 0 && !this.skyOnly) f.phase = 'landing';
     } else if (f.phase === 'landing') {
       // keep flying forward until over open ground away from the player, then come straight down
       if (this.landingSpot(player)) {
@@ -286,6 +300,18 @@ export class WorldDragon {
   // ---- called by the player ----
 
   // Fly over and land next to the player (within 10 seconds from anywhere on the map).
+  // Fly to a fixed spot, land, and stay there (adventure: the dragons coming down to rest).
+  flyTo(spot) {
+    this.skyOnly = false;
+    this.restSpot = spot;
+    this.summon = { phase: this.grounded ? 'takeoff' : 'cruise', spot, timer: 0, fixed: true };
+    this.curious = false;
+    this.brain.hold = true;
+    this.flight = null;
+    this.target = null;
+    this.dragon.setMode('fly');
+  }
+
   callTo(player) {
     if (this.motor) return;
     this.summon = { phase: this.grounded ? 'takeoff' : 'cruise', spot: null, timer: 0 };
@@ -324,7 +350,7 @@ export class WorldDragon {
     const s = this.summon;
     s.timer += dt;
     this.dragon.setMode('fly');
-    if (player && (s.timer % 0.5 < dt || !s.spot)) this.pickSummonSpot(player); // the player may be moving
+    if (!s.fixed && player && (s.timer % 0.5 < dt || !s.spot)) this.pickSummonSpot(player); // the player may be moving
     const spot = s.spot ?? { x: this.x, z: this.z };
     const dist = Math.hypot(spot.x - this.x, spot.z - this.z);
     if (s.phase === 'takeoff' || s.phase === 'cruise') {
@@ -332,7 +358,7 @@ export class WorldDragon {
       const H = GROUND + SUMMON_HEIGHT;
       this.y += Math.sign(H - this.y) * Math.min(Math.abs(H - this.y), 5 * dt);
       const clear = Math.min(1, (this.y - GROUND) / 2.5); // up off the ground before speeding off
-      const speed = Math.min(45, Math.max(8, dist / 3.5)) * clear;
+      const speed = (s.fixed ? Math.min(9, Math.max(5, dist / 3)) : Math.min(45, Math.max(8, dist / 3.5))) * clear;
       this.steer(dt, spot.x, spot.z, speed, 4);
       if (dist < 1) s.phase = 'landing';
     } else if (s.phase === 'landing') {
@@ -342,7 +368,7 @@ export class WorldDragon {
       this.y = Math.max(GROUND, this.y - 5 * dt);
       if (this.y <= GROUND + 0.001) {
         this.summon = null;
-        this.waiting = WAIT_FOR_RIDER;
+        this.waiting = s.fixed ? Infinity : WAIT_FOR_RIDER; // resting dragons stay put
         this.dragon.setMode('sit');
       }
     }

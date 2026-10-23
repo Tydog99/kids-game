@@ -169,6 +169,34 @@ export class TreasureView {
     beam.material.uniforms.uStrength.value = Math.min(1.1, 0.45 + d / 60);
   }
 
+  // Show a saved hunt as it was left: collected keys gone, an opened chest open.
+  restore() {
+    for (const k of this.keys) {
+      if (!k.data.collected) continue;
+      k.mesh.visible = k.pool.visible = k.beam.visible = false;
+    }
+    if (this.hunt.chest.open) {
+      this.lidOpen = 1;
+      this.lid.rotation.x = -1.95;
+      this.chestBeam.visible = false;
+    }
+  }
+
+  // A soft beam of light marking a spot (like a resting dragon). Returns it, for removeMarker.
+  addMarker(x, z, color) {
+    const beam = this.addBeam(x, z, color);
+    beam.material.uniforms.uOpacity.value = 0.75;
+    (this.markers ??= []).push(beam);
+    return beam;
+  }
+
+  removeMarker(beam) {
+    this.markers = this.markers.filter((b) => b !== beam);
+    this.group.remove(beam);
+    beam.geometry.dispose();
+    beam.material.dispose();
+  }
+
   collectKey(key) {
     const k = this.keys.find((k) => k.data === key);
     if (k) k.collecting = true;
@@ -221,6 +249,11 @@ export class TreasureView {
       this.chestBeam.material.uniforms.uTime.value = t;
       this.placeBeam(this.chestBeam, camera);
       if (fadeOut === 0) this.chestBeam.visible = false;
+    }
+
+    for (const b of this.markers ?? []) {
+      b.material.uniforms.uTime.value = t;
+      this.placeBeam(b, camera);
     }
 
     if (this.opening) this.updateOpening(dt);

@@ -11,11 +11,14 @@ export class Hud {
     this.el.innerHTML = `
       <button class="pill seed" title="Copy this world's seed to share it">🌍 <span></span></button>
       <div class="top-right">
+        <button class="pill book-btn" type="button" hidden>📖 Dragon Book</button>
         <button class="pill options" type="button">⚙️ Options</button>
         <button class="pill exit">New World</button>
       </div>
       <div class="banner"></div>
       <div class="keys" hidden></div>
+      <div class="goal" hidden aria-live="polite"><span class="goal-icon"></span><span class="goal-text"></span></div>
+      <div class="speech" hidden aria-live="polite"><b class="speech-who"></b><span class="speech-text"></span><button type="button" class="speech-read" aria-label="Read out loud">🔊</button></div>
       <div class="daypanel">
         <div class="setting">
           <div class="setting-head"><label for="dayspeed">☀️ Sun speed</label><output for="dayspeed"></output></div>
@@ -33,7 +36,11 @@ export class Hud {
           <div class="setting-head"><label for="music">🎵 Music</label><output for="music"></output></div>
           <input id="music" type="range" min="0" max="10" step="1" />
         </div>
-        <label class="debug" hidden><input id="debug-open" type="checkbox" /> 🛠️ Debug: open without keys</label>
+        <div class="grown-up" hidden>
+          <span>Grown-ups:</span>
+          <button type="button" class="skip">⏭ Skip ahead</button>
+          <button type="button" class="reset">↺ Start over</button>
+        </div>
       </div>
       <div class="hint">⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around</div>
       <div class="dpad">
@@ -133,16 +140,52 @@ export class Hud {
     this.banner.classList.add('show');
   }
 
-  // Treasure hunt only: checkbox that lets the chest open without keys.
-  showDebugToggle(checked, onChange) {
-    const row = this.el.querySelector('.debug');
-    const box = row.querySelector('input');
+  // Adventure: grown-up shortcuts to skip a chapter or start the story again.
+  showGrownUp({ onSkip, onReset }) {
+    const row = this.el.querySelector('.grown-up');
     row.hidden = false;
-    box.checked = checked;
-    box.addEventListener('change', () => {
-      onChange(box.checked);
-      box.blur(); // hand the arrow keys back to walking
-    });
+    row.querySelector('.skip').onclick = onSkip;
+    const reset = row.querySelector('.reset');
+    reset.onclick = () => {
+      // ask once by changing the label, so it isn't pressed by accident
+      if (reset.dataset.armed) return onReset();
+      reset.dataset.armed = '1';
+      reset.textContent = 'Sure? Press again';
+      setTimeout(() => {
+        delete reset.dataset.armed;
+        reset.textContent = '↺ Start over';
+      }, 3000);
+    };
+  }
+
+  // Adventure has exactly three dragons, so there's no slider for them.
+  hideDragonSlider() {
+    this.el.querySelector('#dragons').closest('.setting').hidden = true;
+  }
+
+  // The quest tracker: what to do next.
+  showGoal(goal) {
+    const g = this.el.querySelector('.goal');
+    g.hidden = !goal;
+    if (!goal) return;
+    g.querySelector('.goal-icon').textContent = goal.icon;
+    g.querySelector('.goal-text').textContent = goal.text;
+  }
+
+  // A villager's speech box with a read-aloud button; null hides it.
+  showSpeech(speech) {
+    const b = this.el.querySelector('.speech');
+    b.hidden = !speech;
+    if (!speech) return;
+    b.querySelector('.speech-who').textContent = speech.who;
+    b.querySelector('.speech-text').textContent = speech.text;
+    b.querySelector('.speech-read').onclick = speech.onRead;
+  }
+
+  showBookButton(onClick) {
+    const b = this.el.querySelector('.book-btn');
+    b.hidden = false;
+    b.onclick = onClick;
   }
 
   showKeys(count, total) {

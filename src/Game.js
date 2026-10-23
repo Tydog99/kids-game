@@ -10,6 +10,7 @@ import { Input } from './player/input.js';
 import { FollowCamera } from './camera/FollowCamera.js';
 import { Hud } from './ui/Hud.js';
 import { placeTreasure, TreasureHunt } from './treasure.js';
+import { Story } from './adventure/Story.js';
 import { TreasureView } from './world/TreasureView.js';
 import { RADIUS as PLAYER_RADIUS } from './player/PlayerMotor.js';
 import { addLights, SKY } from './scene.js';
@@ -38,12 +39,12 @@ const TOWN_PREFIX = ['Maple', 'Pebble', 'Ember', 'Mossy', 'Sunny', 'Acorn', 'Wil
 const TOWN_SUFFIX = ['Town', 'Village', 'Hollow', 'Meadow', 'City'];
 
 export class Game {
-  // mode: 'explore' or 'treasure'
+  // mode: 'adventure' (the Dragon Keeper story) or 'free' (free play)
   // onOptions: opens the Options menu (from the HUD button)
-  constructor(seed, characterId, onExit, canvas, mode = 'explore', onOptions = () => {}) {
+  constructor(seed, characterId, onExit, canvas, mode = 'free', onOptions = () => {}) {
     this.world = generateWorld(seed);
     this.mode = mode;
-    if (mode === 'treasure') {
+    if (mode === 'adventure') {
       this.hunt = new TreasureHunt(placeTreasure(this.world));
       const c = this.hunt.chest;
       this.chestTile = c.z * this.world.width + c.x;
@@ -113,7 +114,7 @@ export class Game {
 
     // dragons roam where they have open ground (no trees, water, buildings or the chest)
     this.dragons = new WorldDragons(this.scene, this.world, (x, z) => this.walkable(x, z) === true);
-    this.dragons.setCount(dragonCount);
+    if (mode !== 'adventure') this.dragons.setCount(dragonCount);
     // dragons that trust you are saved per world
     this.namesKey = `trusted:${seed}`;
     let names = {};
@@ -123,20 +124,16 @@ export class Game {
       /* ignore a corrupt save */
     }
     this.dragons.setNames(names);
-    this.player.motor.obstacles = () => (this.riding ? [] : this.dragons.obstacles());
+    this.player.motor.obstacles = () => (this.riding ? [] : [...this.dragons.obstacles(), ...(this.story ? [this.story.ollie.obstacle] : [])]);
     this.riding = null; // the WorldDragon being ridden
-    this.naming = false;
+    this.naming = false; // the dragon-naming box is open
+    this.modal = false; // something like the Dragon Book is open; the game waits
     this.refreshMyDragons(true);
 
     if (this.hunt) {
       this.treasureView = new TreasureView(this.scene, this.hunt);
-      this.hud.showKeys(0, this.hunt.keys.length);
-      this.hunt.debugOpenWithoutKeys = load('debugOpen', 'false') === 'true';
-      this.hud.showDebugToggle(this.hunt.debugOpenWithoutKeys, (on) => {
-        this.hunt.debugOpenWithoutKeys = on;
-        save('debugOpen', String(on));
-      });
-      this.hud.showBanner('Find the 3 golden keys! Follow the beams of light', true);
+      this.hud.hideDragonSlider();
+      this.story = new Story(this);
     }
 
     const nameRng = createRng(`${seed}:names`);
@@ -331,6 +328,12 @@ export class Game {
     for (const d of this.dragons.list) {
       if (d.trusted) continue;
       const distance = d.distanceTo(p.x, p.z);
+      // in the adventure, a dragon only starts to trust you once you've helped it
+      if (this.story && !this.story.canBefriend(d)) {
+        d.trust = 0;
+        if (this.story.trustHint(d) && distance < TRUST_SHOW && d.grounded && (!shown || distance < shown.distance)) shown = { d, distance };
+        continue;
+      }
       if (!this.naming) d.trust = updateTrust(d.trust, dt, { distance, grounded: d.grounded && !d.summon, playerSpeed: p.speed });
       if (distance < TRUST_SHOW && d.grounded && (!shown || distance < shown.distance)) shown = { d, distance };
       if (d.trust >= 1 && !this.naming) this.befriend(d);
@@ -338,8 +341,10 @@ export class Game {
     if (!shown || this.riding) return this.hud.showTrust(null);
     const { d } = shown;
     const kind = DRAGONS[d.kind].name;
-    const text =
-      d.trust >= 1 ? `${kind} trusts you!` : shown.distance > 3.5 ? `Come closer to make friends with ${kind}` : p.speed > 0.3 ? `Stay calm… ${kind} is watching you` : `${kind} is getting to know you…`;
+    const locked = this.story && !this.story.canBefriend(d);
+    const text = locked
+      ? this.story.trustHint(d)
+      : d.trust >= 1 ? `${kind} trusts you!` : shown.distance > 3.5 ? `Come closer to make friends with ${kind}` : p.speed > 0.3 ? `Stay calm… ${kind} is watching you` : `${kind} is getting to know you…`;
     this.hud.showTrust({ hearts: heartsFor(d.trust), text, color: DRAGONS[d.kind].colors.body });
   }
 
@@ -351,7 +356,8 @@ export class Game {
       this.naming = false;
       const names = { ...this.dragons.names, [d.index]: cleanName(name, d.kind) };
       this.dragons.setNames(names);
-      save(this.namesKey, JSON.stringify(names));
+      if (this.story) this.story.onBefriend(d, names[d.index]);
+      else save(this.namesKey, JSON.stringify(names));
       this.hud.showBanner(`${names[d.index]} is your dragon! Press E to ride`, true);
       this.refreshMyDragons(true);
     });
@@ -423,11 +429,13 @@ export class Game {
   }
 
   update(dt, t) {
-    const interact = this.naming ? false : this.input.takeTap('interact');
+    const blocked = this.naming || this.modal;
+    if (this.modal) this.input.clearTaps();
+    const interact = blocked ? false : this.input.takeTap('interact');
     let p;
     if (this.riding) {
       const d = this.riding;
-      d.ride(dt, this.naming ? {} : this.input.peek());
+      d.ride(dt, blocked ? {} : this.input.peek());
       this.input.clearTaps();
       // keep the player's position in step for town names, treasure, etc.
       const m = this.player.motor;
@@ -445,9 +453,11 @@ export class Game {
       if (interact) {
         const d = this.nearestRideable();
         if (d) this.mount(d);
+        else if (this.story?.examinable()) this.story.openBook(this.story.examinable().kind);
+        else if (this.story?.nearOllie()) this.story.talk();
       }
       if (!this.riding) {
-        this.player.update(dt, this.naming ? { peek: () => ({}), clearTaps() {} } : this.input, t);
+        this.player.update(dt, blocked ? { peek: () => ({}), clearTaps() {} } : this.input, t);
         p = this.player.position;
       } else p = this.focusPoint.set(this.riding.x, this.riding.y + 0.9 * this.riding.scale, this.riding.z);
     }
@@ -472,11 +482,14 @@ export class Game {
       this.hud.showPrompt(d.motor.grounded ? `E · climb off ${d.name}` : null);
     } else {
       const d = this.nearestRideable();
-      this.hud.showPrompt(d ? `🐉 E · ride ${d.name}` : null);
+      const look = !d && this.story?.examinable();
+      const ollie = !d && !look && this.story?.nearOllie();
+      this.hud.showPrompt(d ? `🐉 E · ride ${d.name}` : look ? `📖 E · look at ${DRAGONS[look.kind].name}` : ollie ? '💬 E · talk to Grandpa Ollie' : null);
     }
 
     const m = this.player.motor;
     if (this.hunt) this.updateHunt(dt, t, m);
+    this.story?.update(dt, t);
     const town = this.townAt(m.x, m.z);
     if (town !== this.currentTown) {
       if (town) this.hud.showBanner(town.name);
@@ -491,9 +504,9 @@ export class Game {
     const reach = this.riding ? (this.riding.y < 3 ? this.riding.bodyR : -1) : PLAYER_RADIUS;
     const events = reach < 0 ? [] : this.hunt.update(dt, m.px, m.pz, reach);
     for (const e of events) {
+      this.story?.onHuntEvent(e);
       if (e.type === 'key') {
         this.treasureView.collectKey(e.key);
-        this.hud.showKeys(e.count, this.hunt.keys.length);
         if (e.count < this.hunt.keys.length) this.hud.showBanner(`Golden key ${e.count} of ${this.hunt.keys.length}!`, true);
       } else if (e.type === 'allKeys') {
         this.treasureView.showChestBeam();
@@ -530,6 +543,7 @@ export class Game {
     this.input.dispose();
     this.removeDrag();
     this.dragons.dispose();
+    this.story?.dispose();
     this.treasureView?.dispose();
     this.dayCycle.dispose();
     this.hud.dispose();

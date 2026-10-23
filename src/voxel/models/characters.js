@@ -255,7 +255,52 @@ function hair(g, c, id) {
   }
 }
 
+// Grandpa Ollie, the villager: built like the boy, with his own colors, plus a flat cap,
+// round glasses and a big white beard.
+const GRANDPA = {
+  label: 'Grandpa Ollie',
+  skin: '#e8b98a',
+  hair: '#e9e9e9', hairDark: '#cfcfcf', hairLight: '#ffffff',
+  eyes: '#4a3424',
+  jacket: '#5f8f4e', jacketDark: '#4b7a3c', lining: '#8a5a32',
+  tee: '#f4e9d4',
+  pants: '#7a5a3a', pantsDark: '#664a2e',
+  shoes: '#5a3a22', soles: '#3a2a1a', laces: '#6b4a2e',
+};
+
+function grandpaParts() {
+  const parts = { ...legs(GRANDPA, 'boy'), torso: torso(GRANDPA, 'boy'), ...arms(GRANDPA, 'boy'), head: head(GRANDPA, 'boy') };
+  const h = parts.head;
+  // flat cap with a brim, over the hair
+  for (let y = 44; y <= 48; y++)
+    for (let z = -9; z <= 8; z++)
+      for (let x = -10; x <= 9; x++) {
+        const r = Math.hypot(x + 0.5, z * 1.05);
+        if (r <= 9.6 - (y - 44) * 0.9) h.set(x, y, z, y === 44 ? '#6f5530' : '#8a6a3a');
+      }
+  for (let z = 7; z <= 11; z++) for (let x = -7; x <= 6; x++) h.set(x, 44, z, '#6f5530');
+  // beard and moustache
+  for (let y = 26; y <= 33; y++)
+    for (let x = -7; x <= 6; x++) {
+      const w = y <= 28 ? 4 - (28 - y) : 7;
+      if (Math.abs(x + 0.5) > w) continue;
+      for (let z = y >= 31 ? 7 : 5; z <= 8; z++) h.set(x, y, z, (x + y) % 4 ? GRANDPA.hair : GRANDPA.hairDark);
+    }
+  for (const x of [-4, -3, 2, 3]) h.set(x, 33, 8, GRANDPA.hairLight);
+  // round glasses
+  for (const ex of [-6, 2]) {
+    for (let x = ex - 1; x <= ex + 4; x++)
+      for (let y = 34; y <= 39; y++) {
+        const edge = x === ex - 1 || x === ex + 4 || y === 34 || y === 39;
+        if (edge) h.set(x, y, 8, '#3a3a3a');
+      }
+  }
+  for (let x = -2; x <= 1; x++) h.set(x, 37, 8, '#3a3a3a');
+  return parts;
+}
+
 export function buildCharacterParts(id) {
+  if (id === 'grandpa') return grandpaParts();
   const c = CHARACTERS[id];
   return { ...legs(c, id), torso: torso(c, id), ...arms(c, id), head: head(c, id) };
 }
