@@ -423,19 +423,30 @@ export class Story {
       this.landingAt -= dt;
       if (this.landingAt <= 0) {
         this.landingAt = null;
-        const flying = [];
-        for (const d of this.g.dragons.list) {
-          if (d.trusted) continue;
-          d.hidden = false;
-          d.flyTo(d.restSpot);
-          this.mark(d);
-          flying.push(d);
-        }
-        this.g.hud.showBanner('Look! The dragons are landing!', true);
-        // the camera pulls up and away to watch them go (not after a grown-up skip)
-        if (this.watchLanding && flying.length && !this.g.riding) {
+        const waiting = this.g.dragons.list.filter((d) => !d.trusted);
+        for (const d of waiting) d.hidden = false;
+        if (this.watchLanding && waiting.length && !this.g.riding) {
+          // the camera visits each dragon's spot in turn and watches it land
           const { x, z, heading } = this.g.playerInfo();
-          this.g.cutscene = new LandingShot(flying, { x, z }, heading, this.g.scene);
+          const inOrder = REVEAL_ORDER.map((k) => waiting.find((d) => d.kind === k)).filter(Boolean);
+          this.g.cutscene = new LandingShot(inOrder, { x, z }, heading, this.g.scene, (d, from) => {
+            if (from) {
+              d.x = from.x;
+              d.y = from.y;
+              d.z = from.z;
+              d.heading = Math.atan2(d.restSpot.x - from.x, d.restSpot.z - from.z);
+            }
+            d.flyTo(d.restSpot);
+            this.mark(d);
+            if (from) this.g.hud.showBanner(`${DRAGONS[d.kind].name} is landing!`, true);
+          });
+          this.g.hud.showBanner('Look! The dragons are landing!', true);
+        } else {
+          for (const d of waiting) {
+            d.flyTo(d.restSpot);
+            this.mark(d);
+          }
+          this.g.hud.showBanner('Look! The dragons are landing!', true);
         }
         this.watchLanding = false;
       }

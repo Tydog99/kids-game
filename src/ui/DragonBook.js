@@ -22,10 +22,32 @@ function picture(kind) {
     for (let i = 0; i < 120; i++) d.update(1 / 60);
     d.root.rotation.y = -1.05;
     scene.add(d.root);
-    const size = { ember: 1, glimmer: 0.62, frost: 1.1 }[kind];
-    const cam = new THREE.PerspectiveCamera(35, 320 / 220, 0.1, 50);
-    cam.position.set(1.8 * size + 0.3, 1.5 * size + 0.5, 4.6 * size + 0.6);
-    cam.lookAt(0.2 * size, 0.75 * size, 0.1);
+    // frame the whole dragon, head to tail
+    d.root.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    d.root.traverse((o) => {
+      if (o.isMesh && o.visible && o.geometry) box.expandByObject(o, true);
+    });
+    const ball = box.getBoundingSphere(new THREE.Sphere());
+    const cam = new THREE.PerspectiveCamera(35, 320 / 220, 0.1, 100);
+    const dir = new THREE.Vector3(0.35, 0.3, 1).normalize();
+    const corners = [];
+    for (let i = 0; i < 8; i++) corners.push(new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
+    // start well back, then move in until the dragon fills the picture with a little margin
+    let dist = ball.radius / Math.sin(THREE.MathUtils.degToRad(35 / 2));
+    for (let i = 0; i < 4; i++) {
+      cam.position.copy(ball.center).addScaledVector(dir, dist);
+      cam.lookAt(ball.center);
+      cam.updateMatrixWorld();
+      let reach = 0;
+      for (const c of corners) {
+        const v = c.clone().project(cam);
+        reach = Math.max(reach, Math.abs(v.x), Math.abs(v.y));
+      }
+      dist *= reach / 0.9;
+    }
+    cam.position.copy(ball.center).addScaledVector(dir, dist);
+    cam.lookAt(ball.center);
     renderer.render(scene, cam);
     pictures[kind] = renderer.domElement.toDataURL('image/png');
     renderer.dispose();

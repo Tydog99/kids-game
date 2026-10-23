@@ -1,87 +1,148 @@
 // A cutscene for after the Dragon Book is picked up: the camera pulls up and away from the
-// player and follows the dragons as they fly off to their resting spots and land. Then it
-// glides back behind the player.
+// player, then visits each dragon's resting spot in turn and watches that dragon fly in and land.
+// Then it glides back behind the player.
 import * as THREE from 'three';
 import { smooth } from './DragonReveal.js';
 
 const GROUND = 0.25;
-const PULL_BACK = 2; // seconds for the camera to rise up and away
-const HOLD = 1.2; // seconds to watch after the last dragon has landed
-const LONGEST = 15; // never longer than this, however far the dragons fly
-const RETURN = 1.8;
+const PULL_BACK = 1.8; // seconds for the camera to rise up and away from the player
+const MOVE = 2.2; // seconds to glide over to the next dragon's spot
+const AFTER_LANDING = 1.2; // seconds to watch each dragon once it's down
+const LONGEST_EACH = 8; // move on even if a dragon hasn't landed by then
+const RETURN = 2;
 // how far you can see during the shot (the game's fog and camera range are much shorter)
 const VIEW = { near: 45, far: 110 };
 
 export class LandingShot {
-  // dragons: the ones flying down; focus: the player's position; yaw: the way they face
-  constructor(dragons, focus, yaw, scene) {
+  // dragons: the ones to watch land, in order; focus: the player's position; yaw: the way they
+  // face; launch(d, from): send dragon d off from point `from` to its resting spot
+  constructor(dragons, focus, yaw, scene, launch) {
     this.dragons = dragons;
+    this.launch = launch;
+    this.launched = new Set();
     this.fog = scene.fog;
     this.base = { near: this.fog.near, far: this.fog.far, camera: null };
-    this.t = 0;
-    this.end = null; // when the shot starts heading back
-    this.done = false;
     this.p = new THREE.Vector3(focus.x, GROUND, focus.z);
-    this.back = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-    this.mid = this.centre(new THREE.Vector3());
+    this.t = 0;
+    this.done = false;
+    this.returning = false;
+
+    // the first pose: high above and behind the player, looking toward the first dragon's spot
+    const back = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const first = this.shot(dragons[0]);
+    const toFirst = first.look.clone().sub(this.p).setY(0).normalize();
+    this.poses = [{ pos: this.p.clone().addScaledVector(back, 6).addScaledVector(toFirst, -6).setY(GROUND + 16), look: this.p.clone().lerp(first.look, 0.5) }];
     this.camAt = null;
     this.look = null;
+    this.from = null;
+    this.step = -1; // -1: pulling back; then the index of the dragon being watched
+    this.stepT = 0;
     this.followPos = new THREE.Vector3();
     this.followLook = new THREE.Vector3();
   }
 
-  // the middle of where the dragons are now
-  centre(out) {
-    out.set(0, 0, 0);
-    for (const d of this.dragons) out.add(new THREE.Vector3(d.x, d.y, d.z));
-    return out.divideScalar(Math.max(1, this.dragons.length));
-  }
-
-  get landed() {
-    return this.dragons.every((d) => d.grounded && !d.summon);
+  // Where to watch dragon d land from: on the player's side of its spot, a little above, so it
+  // flies in toward the camera.
+  shot(d) {
+    const s = new THREE.Vector3(d.restSpot.x, GROUND, d.restSpot.z);
+    const u = s.clone().sub(this.p).setY(0);
+    if (u.lengthSq() < 1) u.set(0, 0, 1);
+    u.normalize();
+    const side = new THREE.Vector3(-u.z, 0, u.x);
+    return {
+      pos: s.clone().addScaledVector(u, -10).addScaledVector(side, 3).setY(GROUND + 6),
+      look: s.clone().setY(GROUND + 1.2),
+      // the dragon comes in from beyond its spot, high up, curving in from the side
+      from: s.clone().addScaledVector(u, 16).addScaledVector(side, -9).setY(GROUND + 9),
+    };
   }
 
   get locked() {
-    return this.end === null || this.t < this.end;
+    return !this.done && !this.returning;
+  }
+
+  // start gliding from the current view to `to`
+  glide(to) {
+    this.from = { pos: this.camAt.clone(), look: this.look.clone() };
+    this.to = to;
+    this.stepT = 0;
   }
 
   update(dt, camera, followLook) {
+    this.camera = camera;
     this.t += dt;
-    if (this.end === null) {
-      if (this.landed) this.landedAt ??= this.t;
-      if ((this.landedAt !== undefined && this.t > this.landedAt + HOLD && this.t > PULL_BACK + 1) || this.t > LONGEST) this.end = this.t;
+    this.stepT += dt;
+    if (!this.camAt) {
+      // the shot starts from wherever the follow camera is
+      this.camAt = camera.position.clone();
+      this.look = followLook.clone();
+      this.glide(this.poses[0]);
     }
-    if (this.end !== null && this.t >= this.end + RETURN) {
-      this.done = true;
-      this.see(camera, 0);
+
+    if (!this.returning) {
+      const d = this.dragons[this.step];
+      const moving = this.step === -1 ? PULL_BACK : MOVE;
+      const landed = d && d.grounded && !d.summon;
+      if (landed) this.landedAt ??= this.stepT;
+      const next =
+        this.stepT > moving &&
+        (this.step === -1 || (this.landedAt !== undefined && this.stepT > this.landedAt + AFTER_LANDING) || this.stepT > moving + LONGEST_EACH);
+      if (next) {
+        this.landedAt = undefined;
+        this.step++;
+        const nd = this.dragons[this.step];
+        if (nd) {
+          const shot = this.shot(nd);
+          this.glide(shot);
+          this.launchOne(nd, shot.from);
+        } else {
+          this.returning = true;
+          this.stepT = 0;
+          this.from = { pos: this.camAt.clone(), look: this.look.clone() };
+          this.launchRest();
+        }
+      }
+    }
+
+    if (this.returning) {
+      // back to the follow camera
+      const k = smooth(this.stepT / RETURN);
+      this.followPos.copy(camera.position);
+      this.followLook.copy(followLook);
+      camera.position.lerpVectors(this.from.pos, this.followPos, k);
+      camera.lookAt(this.from.look.clone().lerp(this.followLook, k));
+      this.see(camera, 1 - k);
+      if (k >= 1) {
+        this.done = true;
+        this.see(camera, 0);
+      }
       return;
     }
 
-    // high above, somewhere between the player and the dragons, looking down on the dragons;
-    // higher when they are far apart so they all fit in
-    this.mid.lerp(this.centre(new THREE.Vector3()), Math.min(1, dt * 2));
-    const toMid = this.mid.clone().sub(this.p).setY(0);
-    const far = toMid.length();
-    let spread = 0;
-    for (const d of this.dragons) spread = Math.max(spread, Math.hypot(d.x - this.mid.x, d.z - this.mid.z));
-    const dir = far > 1 ? toMid.clone().divideScalar(far) : this.back.clone().negate();
-    const height = 12 + Math.min(14, spread * 0.3 + far * 0.1);
-    const want = this.p.clone().addScaledVector(dir, far * 0.35 - 12 - spread * 0.15).setY(GROUND + height);
-    const wantLook = this.mid.clone().setY(GROUND + 1);
-    if (!this.camAt) {
-      this.camAt = want.clone();
-      this.look = wantLook.clone();
-    }
-    const k = Math.min(1, dt * 1.5);
-    this.camAt.lerp(want, k);
-    this.look.lerp(wantLook, k);
+    // glide between poses, rising up in the middle of long moves so the camera clears the trees
+    const moving = this.step === -1 ? PULL_BACK : MOVE;
+    const k = smooth(this.stepT / moving);
+    const span = this.from.pos.distanceTo(this.to.pos);
+    this.camAt.lerpVectors(this.from.pos, this.to.pos, k);
+    this.camAt.y += Math.sin(k * Math.PI) * Math.min(14, span * 0.25);
+    this.look.lerpVectors(this.from.look, this.to.look, k);
+    // turn to keep the dragon in view as it comes in
+    const d = this.dragons[this.step];
+    if (d) this.look.lerp(new THREE.Vector3(d.x, d.y + 0.6, d.z).lerp(this.to.look, 0.4), k * 0.7);
+    camera.position.copy(this.camAt);
+    camera.lookAt(this.look);
+    this.see(camera, this.step === -1 ? k : 1);
+  }
 
-    const w = this.end === null ? smooth(this.t / PULL_BACK) : 1 - smooth((this.t - this.end) / RETURN);
-    this.followPos.copy(camera.position);
-    this.followLook.copy(followLook);
-    camera.position.lerpVectors(this.followPos, this.camAt, w);
-    camera.lookAt(this.followLook.lerp(this.look, w));
-    this.see(camera, w);
+  launchOne(d, from) {
+    if (this.launched.has(d)) return;
+    this.launched.add(d);
+    this.launch(d, from);
+  }
+
+  // any dragon not yet sent off goes now (straight from where it is)
+  launchRest() {
+    for (const d of this.dragons) this.launchOne(d, null);
   }
 
   // open up the view (w = 1) or put it back as it was (w = 0)
@@ -98,7 +159,7 @@ export class LandingShot {
 
   cancel() {
     this.done = true;
-    this.fog.near = this.base.near;
-    this.fog.far = this.base.far;
+    this.launchRest();
+    if (this.camera) this.see(this.camera, 0);
   }
 }
