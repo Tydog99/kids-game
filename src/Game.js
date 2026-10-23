@@ -430,8 +430,9 @@ export class Game {
   }
 
   update(dt, t) {
-    const blocked = this.naming || this.modal;
-    if (this.modal) this.input.clearTaps();
+    const locked = !!this.cutscene?.locked; // a cutscene is playing: the player waits
+    const blocked = this.naming || this.modal || locked;
+    if (this.modal || locked) this.input.clearTaps();
     const interact = blocked ? false : this.input.takeTap('interact');
     let p;
     if (this.riding) {
@@ -465,6 +466,10 @@ export class Game {
     const yaw = this.riding ? this.riding.heading : this.player.motor.yaw;
     const moving = this.riding ? this.riding.motor.speed !== 0 : this.player.motor.speed !== 0;
     this.follow.update(dt, p, yaw, moving);
+    if (this.cutscene) {
+      this.cutscene.update(dt, this.camera, this.follow.look);
+      if (this.cutscene.done) this.cutscene = null;
+    }
     this.dayCycle.update(dt, p, this.camera);
     music.setNight(this.dayCycle.state.stars > 0.5); // softer music once the stars are out
     this.camera.updateMatrixWorld();

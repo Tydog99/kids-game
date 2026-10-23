@@ -50,6 +50,8 @@ export class WorldDragon {
     this.motor = null; // RideMotor while ridden
     this.skyOnly = false; // adventure chapter 1: stays up in the sky, never lands
     this.restSpot = null; // adventure: where it lands and waits for the player
+    this.hidden = false; // adventure: not seen yet (until its key is found)
+    this.script = null; // (dt) => moves the dragon itself, for a cutscene
     const { center, radii } = this.dragon.spec.torso;
     this.bodyOffset = center[2] * V * this.scale; // body center, ahead of the hips
     this.bodyHalf = radii[2] * V * this.scale * 0.55;
@@ -165,7 +167,13 @@ export class WorldDragon {
 
   // player: { x, z, speed } (null while the player is riding this dragon)
   update(dt, player) {
+    this.dragon.root.visible = !this.hidden;
+    if (this.hidden) return;
     if (this.motor) return this.finish(dt);
+    if (this.script) {
+      this.script(dt);
+      return this.finish(dt);
+    }
     if (this.skyOnly && !this.flight) {
       // take off (or, at the very start, already be up there) and stay in the air
       this.brain.index = 3; // 'fly'
@@ -475,7 +483,7 @@ export class WorldDragons {
   // Grounded dragons are solid to the player.
   obstacles(except) {
     const out = [];
-    for (const d of this.byIndex.values()) if (d !== except && d.y < GROUND + 1) out.push(...d.circles());
+    for (const d of this.byIndex.values()) if (d !== except && !d.hidden && d.y < GROUND + 1) out.push(...d.circles());
     return out;
   }
 

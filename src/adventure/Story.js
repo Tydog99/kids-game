@@ -5,6 +5,7 @@ import { Villager } from './Villager.js';
 import { placeQuestItems } from './questItems.js';
 import { QuestItemsView } from './QuestItemsView.js';
 import { BookView } from './BookView.js';
+import { DragonReveal } from './DragonReveal.js';
 import { openDragonBook } from '../ui/DragonBook.js';
 import { DRAGONS } from '../creatures/dragonModels.js';
 import { speak, speakLine } from '../ui/speak.js';
@@ -15,6 +16,12 @@ const GROUND = 0.25;
 const TALK_RANGE = 4.5; // Ollie's speech shows when the player is this close
 const LOOK_RANGE = 2.2; // how close to a dragon's body to look at it with E
 const BEAM = { ember: '#ff8a4a', glimmer: '#7af0c8', frost: '#9fdcff' };
+const REVEAL_ORDER = ['ember', 'glimmer', 'frost']; // one more dragon shows up with each key
+const REVEAL = {
+  ember: { banner: 'Whoa! A fire dragon! 🔥' },
+  glimmer: { banner: 'Wow! A sparkly diamond dragon! 💎' },
+  frost: { banner: 'Look! An icy snow dragon! ❄️' },
+};
 const COLOR_WORD = { ember: 'orange', glimmer: 'green', frost: 'blue' };
 const PICK_RANGE = 0.85; // how close to an item to pick it up
 const BOOK_RANGE = 1.0; // how close to the Dragon Book to pick it up
@@ -45,7 +52,8 @@ export class Story {
     for (const d of ds.list) {
       d.restSpot = { x: ds.spots[d.index].x + 0.5, z: ds.spots[d.index].z + 0.5 };
       if (!this.p.hasBook) {
-        // up in the sky until the Dragon Book is found
+        // up in the sky until the Dragon Book is found; each one appears when a key is found
+        d.hidden = this.p.chapter === 'treasure' && REVEAL_ORDER.indexOf(d.kind) >= this.p.keys.length;
         d.skyOnly = true;
         d.flight = null;
         d.y = GROUND + 7 + d.index * 1.5;
@@ -149,7 +157,10 @@ export class Story {
   // ---- hooks from the game ----
 
   onHuntEvent(e) {
-    if (e.type === 'key') this.set({ type: 'key', index: this.g.hunt.keys.indexOf(e.key) });
+    if (e.type === 'key') {
+      this.set({ type: 'key', index: this.g.hunt.keys.indexOf(e.key) });
+      if (this.p.chapter === 'treasure') this.revealDragon(REVEAL_ORDER[this.p.keys.length - 1]);
+    }
     if (e.type === 'open') {
       this.set({ type: 'chestOpened' });
       // enjoy the treasure; then Ollie spots something else in the chest
@@ -157,6 +168,26 @@ export class Story {
       this.speechShown = null;
       this.g.hud.showSpeech(null);
     }
+  }
+
+  // A key was found: show the player one of the dragons, swooping in from far away.
+  revealDragon(kind) {
+    const d = this.g.dragons.list.find((d) => d.kind === kind);
+    if (!d || this.g.riding) {
+      if (d) d.hidden = false;
+      return;
+    }
+    const { x, z, heading } = this.g.playerInfo();
+    this.g.cutscene = new DragonReveal(d, { x, z }, heading, {
+      onSee: () => {
+        this.set({ type: 'sawDragon' });
+        this.g.hud.showBanner(REVEAL[d.kind].banner, true);
+        speakLine(`n_see_${d.kind}`);
+      },
+      onDone: () => {
+        if (this.p.keys.length >= 3) this.g.hud.showBanner('All 3 keys! Head back to the treasure chest', true);
+      },
+    });
   }
 
   // The dragon at hand can't start trusting the player until its quest is done.
@@ -341,6 +372,9 @@ export class Story {
       k.collected = true;
       this.set({ type: 'key', index: i });
     });
+    this.g.cutscene?.cancel();
+    this.g.cutscene = null;
+    for (const d of this.g.dragons.list) d.hidden = false;
     treasureView.restore();
     if (!this.g.riding) {
       const st = this.g.startTile(), m = player.motor, c = hunt.chest;
@@ -368,7 +402,11 @@ export class Story {
     this.intro -= dt;
     const near = Math.hypot(player.x - this.ollie.x, player.z - this.ollie.z) < TALK_RANGE;
     this.holdSpeech -= dt;
-    if (this.unboxing !== null || this.holdSpeech > 0) {
+    if (this.g.cutscene && this.speechShown) {
+      // out of the way while a dragon is shown
+      this.speechShown = null;
+      this.g.hud.showSpeech(null);
+    } else if (this.g.cutscene || this.unboxing !== null || this.holdSpeech > 0) {
       // quiet while the treasure pours out; then his line about the book stays up a while
     } else if ((near || this.intro > 0) && !this.g.riding) this.say(ollieSays(this.p));
     else if (this.speechShown) {
@@ -378,19 +416,6 @@ export class Story {
     this.ollie.cheering = this.unboxing !== null && this.unboxing > UNBOXING - 5;
     this.ollie.update(dt, t, player, !!this.speechShown);
     this.updateBook(dt, t, player);
-
-    // chapter 1: the first time a dragon flies close by
-    if (this.p.chapter === 'treasure' && !this.p.sawDragon) {
-      for (const d of this.g.dragons.list) {
-        // flying right over you (high up and maybe off the top of the screen, so say where to look)
-        if (Math.hypot(d.x - player.x, d.z - player.z) < 9) {
-          this.set({ type: 'sawDragon' });
-          this.g.hud.showBanner('Whoa! Was that a dragon?! Look up!', true);
-          speak('Whoa! Was that a dragon? Look up!');
-          break;
-        }
-      }
-    }
 
     // after the chest opens, the dragons fly down to their resting spots
     if (this.landingAt !== null) {

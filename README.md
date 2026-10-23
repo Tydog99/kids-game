@@ -20,7 +20,8 @@ between walking, rearing up and flying, and drag to look around.
 ## Modes
 
 - **Adventure** ("The Dragon Keeper"): Grandpa Ollie lost the 3 golden keys to his treasure
-  chest. Dragons fly overhead while you search. Opening the chest pours out treasure, then Ollie's
+  chest. Each key you find brings a dragon swooping in (a short cutscene), and it stays
+  flying overhead. Opening the chest pours out treasure, then Ollie's
   Dragon Book pops out; picking it up brings the three dragons down to land. Each needs your help before it will trust you. Progress saves per world.
   Grown-ups can skip ahead or start over from the settings panel.
 - **Free Play**: everything unlocked, with a slider for how many dragons roam the world.

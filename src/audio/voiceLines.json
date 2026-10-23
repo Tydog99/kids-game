@@ -39,10 +39,6 @@
   "voice": "ollie",
   "text": "You made friends with every dragon. You are a real Dragon Keeper!"
  },
- "n_whoa": {
-  "voice": "narrator",
-  "text": "Whoa! Was that a dragon? Look up!"
- },
  "n_egg": {
   "voice": "narrator",
   "text": "You found Ember's egg! Carry it back to Ember."
@@ -166,5 +162,17 @@
  "frost_thanks": {
   "voice": "frost",
   "text": "A moon flower. It is so beautiful. Thank you, friend."
+ },
+ "n_see_ember": {
+  "voice": "narrator",
+  "text": "Whoa! A fire dragon!"
+ },
+ "n_see_glimmer": {
+  "voice": "narrator",
+  "text": "Wow! A sparkly diamond dragon!"
+ },
+ "n_see_frost": {
+  "voice": "narrator",
+  "text": "Look! An icy snow dragon!"
  }
 }
