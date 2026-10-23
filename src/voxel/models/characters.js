@@ -299,8 +299,9 @@ function grandpaParts() {
   return parts;
 }
 
-export function buildCharacterParts(id) {
+// look: optional color overrides (see looks.js)
+export function buildCharacterParts(id, look = null) {
   if (id === 'grandpa') return grandpaParts();
-  const c = CHARACTERS[id];
+  const c = { ...CHARACTERS[id], ...(look ?? {}) };
   return { ...legs(c, id), torso: torso(c, id), ...arms(c, id), head: head(c, id) };
 }

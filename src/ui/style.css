@@ -61,6 +61,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .title h1 span { color: var(--yellow); }
 .title .spacer { flex: 1; pointer-events: none; }
 .cards { display: flex; gap: clamp(40px, 14vw, 160px); }
+.looks { display: flex; gap: 8px; justify-content: center; margin-top: -4px; }
+.looks button { padding: 4px 14px; font-size: 17px; font-weight: 700; background: rgba(255, 250, 240, 0.85); }
+.looks .new-look { background: var(--yellow); }
 .modes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .mode {
   padding: 8px 18px;

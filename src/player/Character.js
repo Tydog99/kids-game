@@ -4,13 +4,13 @@ import { buildGeometry, voxelMaterial } from '../voxel/builder.js';
 import { buildCharacterParts, PIVOTS, VOXEL_SIZE as VS } from '../voxel/models/characters.js';
 
 export class Character {
-  constructor(id) {
+  constructor(id, look = null) {
     this.id = id;
     this.root = new THREE.Group();
     this.body = new THREE.Group();
     this.root.add(this.body);
     this.parts = {};
-    for (const [name, grid] of Object.entries(buildCharacterParts(id))) {
+    for (const [name, grid] of Object.entries(buildCharacterParts(id, look))) {
       const pivot = PIVOTS[name];
       const mesh = new THREE.Mesh(buildGeometry(grid, { size: VS, origin: pivot, jitter: 0.015 }), voxelMaterial);
       mesh.castShadow = true;

@@ -25,6 +25,7 @@ import { DAY_LENGTHS, DEFAULT_DAY_INDEX } from './world/skyState.js';
 import { METEOR_RATES, DEFAULT_METEOR_INDEX } from './world/shootingStars.js';
 import { load, save } from './ui/storage.js';
 import { music } from './audio/Music.js';
+import { parseLook } from './voxel/models/looks.js';
 
 const OAK_TRUNK_RADIUS = 0.16;
 const ENV_TOP = { tree: 3.6, building: 6.8 }; // breath below this height hits the thing on that tile
@@ -63,7 +64,7 @@ export class Game {
     this.envView = new EnvironmentView(this.scene, this.worldView);
     this.env = new Environment(this.world, (obj, how) => this.envView.show(obj, how));
 
-    this.player = new Player(this.startTile(), characterId, (x, z) => this.walkable(x, z));
+    this.player = new Player(this.startTile(), characterId, (x, z) => this.walkable(x, z), parseLook(load(`look:${characterId}`, '')));
     this.scene.add(this.player.object);
     this.playerView = new THREE.Vector3();
     this.focusPoint = new THREE.Vector3();

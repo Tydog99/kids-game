@@ -1,6 +1,7 @@
 // Character select + seed entry, with both characters shown live in 3D.
 import * as THREE from 'three';
 import { Character } from '../player/Character.js';
+import { randomLook, parseLook } from '../voxel/models/looks.js';
 import { CHARACTERS } from '../voxel/models/characters.js';
 import { addLights, SKY } from '../scene.js';
 import { randomSeed } from '../rng.js';
@@ -33,13 +34,7 @@ export class TitleScreen {
     this.scene.add(dirt);
 
     this.chars = {};
-    ['boy', 'girl'].forEach((id, i) => {
-      const c = new Character(id);
-      c.root.position.x = i === 0 ? -0.75 : 0.75;
-      c.root.scale.setScalar(1.15);
-      this.scene.add(c.root);
-      this.chars[id] = c;
-    });
+    ['boy', 'girl'].forEach((id) => this.makeChar(id, parseLook(load(`look:${id}`, ''))));
 
     this.selected = load('character', 'boy');
     // (older saves called these 'treasure' and 'explore')
@@ -54,6 +49,10 @@ export class TitleScreen {
       <div class="spacer"></div>
       <div class="cards">
         ${Object.entries(CHARACTERS).map(([id, c]) => `<button class="card" data-id="${id}">${c.label}</button>`).join('')}
+      </div>
+      <div class="looks">
+        <button class="new-look" type="button">🎲 New look</button>
+        <button class="old-look" type="button">↺ Original</button>
       </div>
       <div class="modes" role="radiogroup" aria-label="Game mode">
         <button class="mode" data-mode="adventure" role="radio">🐉 Adventure</button>
@@ -79,6 +78,8 @@ export class TitleScreen {
       onPlay(s, this.selected, this.gameMode);
     };
     this.el.querySelector('.play').onclick = play;
+    this.el.querySelector('.new-look').onclick = () => this.setLooks((id) => randomLook(id));
+    this.el.querySelector('.old-look').onclick = () => this.setLooks(() => null);
     this.el.querySelector('.options-btn').onclick = onOptions;
     this.onKey = (e) => {
       if (this.suspended || document.querySelector('.options-menu')) return;
@@ -129,14 +130,40 @@ export class TitleScreen {
     this.camera.updateProjectionMatrix();
   }
 
+  makeChar(id, look) {
+    const c = new Character(id, look);
+    c.root.position.x = id === 'boy' ? -0.75 : 0.75;
+    c.root.scale.setScalar(1.15);
+    this.scene.add(c.root);
+    this.chars[id] = c;
+    return c;
+  }
+
+  // New looks for both characters (look(id) → colors, or null for the original), with a little hop.
+  setLooks(look) {
+    for (const id of ['boy', 'girl']) {
+      const old = this.chars[id];
+      const l = look(id);
+      save(`look:${id}`, l ? JSON.stringify(l) : '');
+      const c = this.makeChar(id, l);
+      c.root.rotation.y = old.root.rotation.y;
+      this.scene.remove(old.root);
+      old.dispose();
+    }
+    this.hopT = 0;
+    this.hopAll = true;
+  }
+
   update(dt, t) {
     this.hopT += dt;
+    if (this.hopT > 0.5) this.hopAll = false;
     for (const [id, c] of Object.entries(this.chars)) {
       const sel = id === this.selected;
       const target = sel ? 0 : Math.sin(t * 0.6 + (id === 'boy' ? 0 : 2)) * 0.6;
       c.root.rotation.y += (target - c.root.rotation.y) * Math.min(1, dt * 6);
-      c.root.position.y = sel && this.hopT < 0.5 ? Math.sin((this.hopT / 0.5) * Math.PI) * 0.3 : 0;
-      c.animate(t * 6, sel && this.hopT < 0.5, t);
+      const hop = (sel || this.hopAll) && this.hopT < 0.5;
+      c.root.position.y = hop ? Math.sin((this.hopT / 0.5) * Math.PI) * 0.3 : 0;
+      c.animate(t * 6, hop, t);
     }
   }
 

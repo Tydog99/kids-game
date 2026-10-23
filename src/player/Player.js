@@ -4,9 +4,9 @@ import { Character } from './Character.js';
 
 export class Player {
   // start: { x, z, facing } tile to begin on
-  constructor(start, characterId, isWalkable) {
+  constructor(start, characterId, isWalkable, look = null) {
     this.motor = new PlayerMotor(start, isWalkable);
-    this.character = new Character(characterId);
+    this.character = new Character(characterId, look);
     this.object = this.character.root;
     this.groundY = 0.25;
     this.sync(0);
