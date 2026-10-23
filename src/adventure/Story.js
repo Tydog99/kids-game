@@ -1,6 +1,6 @@
 // Runs Adventure mode inside a Game: Grandpa Ollie, the treasure chapter with sky-only dragons,
 // the dragons landing, the Dragon Book, and saving progress for this world.
-import { loadProgress, apply, nextGoal, ollieSays, canBefriend } from './adventure.js';
+import { loadProgress, apply, nextGoal, ollieSays, canBefriend, progressAt } from './adventure.js';
 import { Villager } from './Villager.js';
 import { placeQuestItems } from './questItems.js';
 import { QuestItemsView } from './QuestItemsView.js';
@@ -86,7 +86,7 @@ export class Story {
     this.speechShown = null;
     this.intro = 6; // seconds Ollie's first words stay up wherever the player is
     this.refresh();
-    game.hud.showGrownUp({ onSkip: () => this.skip(), onReset: () => this.reset() });
+    game.hud.showGrownUp({ onSkip: () => this.skip(), onReset: () => this.reset(), onJump: (chapter) => this.jumpTo(chapter) });
     if (this.p.hasBook) game.hud.showBookButton(() => this.openBook());
     if (LATER.includes(this.p.chapter)) this.startRace();
     if (this.p.chapter === 'village' || this.p.chapter === 'done') this.startVillage();
@@ -482,6 +482,13 @@ export class Story {
     treasureView.open();
     this.g.hud.showBanner('You opened the treasure!', true);
     this.onHuntEvent({ type: 'open' });
+  }
+
+  // Grown-up shortcut: start this world over at the beginning of a chapter.
+  jumpTo(chapter) {
+    save(this.key, JSON.stringify(progressAt(chapter, this.p.friends)));
+    save(this.g.namesKey, '{}');
+    this.g.restart();
   }
 
   reset() {

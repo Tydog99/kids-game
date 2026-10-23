@@ -48,7 +48,12 @@ function startGame(seed, characterId, gameMode) {
   // let the loading message paint before the (synchronous) world build
   requestAnimationFrame(() =>
     setTimeout(() => {
-      mode = new Game(seed, characterId, showTitle, renderer.domElement, gameMode, openOptions);
+      mode = new Game(seed, characterId, showTitle, renderer.domElement, gameMode, openOptions, () => {
+        // start the same world again (the story reads its saved progress afresh)
+        mode.dispose();
+        mode = { dispose() {}, resize() {}, update() {} };
+        startGame(seed, characterId, gameMode);
+      });
       loading.classList.remove('show');
     }, 30),
   );

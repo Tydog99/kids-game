@@ -40,6 +40,30 @@ export function newProgress() {
   };
 }
 
+// Progress as it is at the very start of a chapter (the grown-up "Jump to" shortcut). Everything
+// before that chapter is done; the dragons keep any names already given, or their own names.
+export function progressAt(chapter, friends = {}) {
+  const p = newProgress();
+  if (chapter === 'treasure' || !CHAPTERS.includes(chapter)) return p;
+  Object.assign(p, { keys: [0, 1, 2], chestOpen: true, hasBook: true, sawDragon: true, chapter: 'dragons' });
+  if (chapter === 'dragons') return p;
+  const all = Object.fromEntries(KINDS.map((k) => [k, true]));
+  Object.assign(p, {
+    landed: true,
+    accepted: { ...all },
+    quests: { ...all },
+    egg: true,
+    flower: true,
+    gems: [0, 1, 2, 3, 4],
+    friends: Object.fromEntries(KINDS.map((k) => [k, friends[k] || NAMES[k]])),
+    chapter: 'race',
+  });
+  if (chapter === 'race') return p;
+  Object.assign(p, { raceDone: true, chapter: 'village' });
+  if (chapter === 'village') return p;
+  return { ...p, helped: { ...all }, chapter: 'done' };
+}
+
 // Read saved progress, tolerating anything missing or broken.
 export function loadProgress(json) {
   const base = newProgress();

@@ -141,10 +141,30 @@ export class Hud {
   }
 
   // Adventure: grown-up shortcuts to skip a chapter or start the story again.
-  showGrownUp({ onSkip, onReset }) {
+  // onJump(chapter) starts a chapter from its beginning.
+  showGrownUp({ onSkip, onReset, onJump }) {
     const row = this.el.querySelector('.grown-up');
     row.hidden = false;
-    row.querySelector('.skip').onclick = onSkip;
+    // Skip ahead opens a little menu: the next step, or jump straight to a chapter
+    const menu = document.createElement('div');
+    menu.className = 'skip-menu';
+    menu.hidden = true;
+    menu.innerHTML = `
+      <button type="button" data-go="next">⏭ Next step</button>
+      <span>Jump to:</span>
+      <button type="button" data-go="treasure">🔑 Keys</button>
+      <button type="button" data-go="dragons">🐉 Dragons</button>
+      <button type="button" data-go="race">🏁 Race</button>
+      <button type="button" data-go="village">🏘️ Villagers</button>`;
+    row.append(menu);
+    row.querySelector('.skip').onclick = () => (menu.hidden = !menu.hidden);
+    menu.onclick = (e) => {
+      const go = e.target.closest('button')?.dataset.go;
+      if (!go) return;
+      menu.hidden = true;
+      if (go === 'next') onSkip();
+      else onJump(go);
+    };
     const reset = row.querySelector('.reset');
     reset.onclick = () => {
       // ask once by changing the label, so it isn't pressed by accident

@@ -43,7 +43,9 @@ const TOWN_SUFFIX = ['Town', 'Village', 'Hollow', 'Meadow', 'City'];
 export class Game {
   // mode: 'adventure' (the Dragon Keeper story) or 'free' (free play)
   // onOptions: opens the Options menu (from the HUD button)
-  constructor(seed, characterId, onExit, canvas, mode = 'free', onOptions = () => {}) {
+  // onRestart(): start this same world again (adventure: after jumping to a chapter)
+  constructor(seed, characterId, onExit, canvas, mode = 'free', onOptions = () => {}, onRestart = () => location.reload()) {
+    this.restart = onRestart;
     this.world = generateWorld(seed);
     this.mode = mode;
     if (mode === 'adventure') {

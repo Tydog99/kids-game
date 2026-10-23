@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newProgress, loadProgress, apply, nextGoal, ollieSays, dragonsCanLand, canBefriend } from '../src/adventure/adventure.js';
+import { newProgress, loadProgress, apply, nextGoal, ollieSays, dragonsCanLand, canBefriend, progressAt } from '../src/adventure/adventure.js';
 
 describe('adventure progress', () => {
   it('chapter 1: keys, then the chest opens the dragon chapter', () => {
@@ -68,6 +68,20 @@ describe('adventure progress', () => {
     expect(p.chapter).toBe('village');
     for (let i = 0; i < 3; i++) p = apply(p, { type: 'skip' });
     expect(p.chapter).toBe('done');
+  });
+
+  it('jumping to a chapter starts it fresh, with everything before it done', () => {
+    expect(progressAt('treasure')).toEqual(newProgress());
+    const dragons = progressAt('dragons');
+    expect([dragons.chapter, dragons.hasBook, dragons.landed]).toEqual(['dragons', true, false]);
+    const race = progressAt('race', { ember: 'Sparky' });
+    expect(race.chapter).toBe('race');
+    expect(race.friends).toEqual({ ember: 'Sparky', glimmer: 'Glimmer', frost: 'Frost' });
+    expect(nextGoal(race).text).toMatch(/magic ring/);
+    const village = progressAt('village');
+    expect([village.chapter, village.raceDone, nextGoal(village).text]).toEqual(['village', true, 'Help the villagers (0/3)']);
+    // it survives saving and loading
+    expect(loadProgress(JSON.stringify(village))).toEqual(village);
   });
 
   it('old finished saves pick up at the race', () => {
