@@ -12,7 +12,7 @@ const RETURN = 1.6; // seconds for the camera to come back behind the player
 const RADIUS = 7; // of the circle around the player
 const HEIGHT = 4.5; // of the circle, above the ground
 
-const smooth = (k) => {
+export const smooth = (k) => {
   k = Math.min(1, Math.max(0, k));
   return k * k * (3 - 2 * k);
 };

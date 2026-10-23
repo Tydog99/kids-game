@@ -6,6 +6,7 @@ import { placeQuestItems } from './questItems.js';
 import { QuestItemsView } from './QuestItemsView.js';
 import { BookView } from './BookView.js';
 import { DragonReveal } from './DragonReveal.js';
+import { LandingShot } from './LandingShot.js';
 import { openDragonBook } from '../ui/DragonBook.js';
 import { DRAGONS } from '../creatures/dragonModels.js';
 import { speak, speakLine } from '../ui/speak.js';
@@ -417,17 +418,26 @@ export class Story {
     this.ollie.update(dt, t, player, !!this.speechShown);
     this.updateBook(dt, t, player);
 
-    // after the chest opens, the dragons fly down to their resting spots
+    // once the Dragon Book is found, the dragons fly down to their resting spots
     if (this.landingAt !== null) {
       this.landingAt -= dt;
       if (this.landingAt <= 0) {
         this.landingAt = null;
+        const flying = [];
         for (const d of this.g.dragons.list) {
           if (d.trusted) continue;
+          d.hidden = false;
           d.flyTo(d.restSpot);
           this.mark(d);
+          flying.push(d);
         }
         this.g.hud.showBanner('Look! The dragons are landing!', true);
+        // the camera pulls up and away to watch them go (not after a grown-up skip)
+        if (this.watchLanding && flying.length && !this.g.riding) {
+          const { x, z, heading } = this.g.playerInfo();
+          this.g.cutscene = new LandingShot(flying, { x, z }, heading, this.g.scene);
+        }
+        this.watchLanding = false;
       }
     }
     if (!this.p.landed && this.p.hasBook && this.g.dragons.list.every((d) => d.trusted || (d.grounded && !d.summon))) {
@@ -456,7 +466,8 @@ export class Story {
       this.g.hud.showBanner('You found the Dragon Book! 📖', true);
       this.say(ollieSays(this.p), true);
       this.holdSpeech = 5;
-      this.landingAt = 2.5; // the dragons come down
+      this.landingAt = 1.2; // the dragons come down, and the camera follows them
+      this.watchLanding = true;
     }
   }
 
