@@ -4,6 +4,7 @@ import { loadProgress, apply, nextGoal, ollieSays, canBefriend } from './adventu
 import { Villager } from './Villager.js';
 import { placeQuestItems } from './questItems.js';
 import { QuestItemsView } from './QuestItemsView.js';
+import { BookView } from './BookView.js';
 import { openDragonBook } from '../ui/DragonBook.js';
 import { DRAGONS } from '../creatures/dragonModels.js';
 import { speak, speakLine } from '../ui/speak.js';
@@ -16,6 +17,8 @@ const LOOK_RANGE = 2.2; // how close to a dragon's body to look at it with E
 const BEAM = { ember: '#ff8a4a', glimmer: '#7af0c8', frost: '#9fdcff' };
 const COLOR_WORD = { ember: 'orange', glimmer: 'green', frost: 'blue' };
 const PICK_RANGE = 0.85; // how close to an item to pick it up
+const BOOK_RANGE = 1.0; // how close to the Dragon Book to pick it up
+const UNBOXING = 7; // seconds from the chest opening to the Dragon Book popping out (5 of coins, then a pause)
 const GIVE_RANGE = 2.8; // how close to a dragon's body to hand it something
 
 export class Story {
@@ -41,8 +44,8 @@ export class Story {
     this.markers = new Map();
     for (const d of ds.list) {
       d.restSpot = { x: ds.spots[d.index].x + 0.5, z: ds.spots[d.index].z + 0.5 };
-      if (this.p.chapter === 'treasure') {
-        // up in the sky to begin with
+      if (!this.p.hasBook) {
+        // up in the sky until the Dragon Book is found
         d.skyOnly = true;
         d.flight = null;
         d.y = GROUND + 7 + d.index * 1.5;
@@ -61,11 +64,32 @@ export class Story {
     this.time = 0;
 
     this.landingAt = null;
+    this.unboxing = null; // counts down after the chest opens, until the Dragon Book pops out
+    this.holdSpeech = 0; // keeps a line Ollie just said up for a while
+    this.book = new BookView(game.scene);
+    if (this.p.chestOpen && !this.p.hasBook) {
+      const st = game.startTile();
+      this.book.show(this.bookSpot({ x: st.x + 0.5, z: st.z + 0.5 }));
+    }
     this.speechShown = null;
     this.intro = 6; // seconds Ollie's first words stay up wherever the player is
     this.refresh();
     game.hud.showGrownUp({ onSkip: () => this.skip(), onReset: () => this.reset() });
-    if (this.p.chestOpen) game.hud.showBookButton(() => this.openBook());
+    if (this.p.hasBook) game.hud.showBookButton(() => this.openBook());
+  }
+
+  // Where the Dragon Book lands: beside the chest (not hidden behind it), as seen from `from`, a world position.
+  bookSpot(from) {
+    const { chest } = this.g.hunt;
+    const cx = chest.x + 0.5, cz = chest.z + 0.5;
+    const base = Math.atan2(cz - from.z, cx - from.x);
+    for (const off of [1.6, -1.6, 1.25, -1.25, 2, -2, 0.9, -0.9, 0, 2.6, -2.6]) {
+      for (const r of [1.8, 1.4, 2.3]) {
+        const x = cx + Math.cos(base + off) * r, z = cz + Math.sin(base + off) * r;
+        if (this.g.walkable(Math.floor(x), Math.floor(z)) === true && Math.hypot(x - this.ollie.x, z - this.ollie.z) > 1) return { x, z };
+      }
+    }
+    return { x: cx, z: cz + 1.5 };
   }
 
   // Ollie stands in front of the player, level with the chest but on the other side of the
@@ -128,10 +152,10 @@ export class Story {
     if (e.type === 'key') this.set({ type: 'key', index: this.g.hunt.keys.indexOf(e.key) });
     if (e.type === 'open') {
       this.set({ type: 'chestOpened' });
-      this.landingAt = 2.5; // a moment to enjoy the coins, then the dragons come down
-      this.g.hud.showBookButton(() => this.openBook());
-      this.say(ollieSays(this.p), true);
-      setTimeout(() => this.g.hud.showBanner('You found the Dragon Book! 📖', true), 1800);
+      // enjoy the treasure; then Ollie spots something else in the chest
+      this.unboxing = UNBOXING;
+      this.speechShown = null;
+      this.g.hud.showSpeech(null);
     }
   }
 
@@ -157,7 +181,7 @@ export class Story {
 
   // Something to look at with E: a dragon that isn't your friend yet, or Ollie.
   examinable() {
-    if (this.p.chapter === 'treasure') return null;
+    if (!this.p.hasBook) return null;
     const { x, z } = this.g.playerInfo();
     for (const d of this.g.dragons.list) if (!d.trusted && d.grounded && !d.summon && d.distanceTo(x, z) < LOOK_RANGE) return d;
     return null;
@@ -297,17 +321,21 @@ export class Story {
 
   // Grown-up shortcut.
   skip() {
-    const before = this.p.chapter;
+    const before = this.p.chapter, hadBook = this.p.hasBook;
     this.set({ type: 'skip' });
+    if (!hadBook) {
+      this.unboxing = null;
+      this.book.hide();
+      this.g.hud.showBookButton(() => this.openBook());
+      this.landingAt = 0.1;
+    }
     if (before === 'treasure') {
       const { hunt, treasureView } = this.g;
       hunt.keys.forEach((k) => (k.collected = true));
       hunt.chest.open = true;
       treasureView.restore();
-      this.landingAt = 0.1;
-      this.g.hud.showBookButton(() => this.openBook());
     }
-    this.g.hud.showBanner(before === 'treasure' ? 'Skipped to: the dragons land' : 'Skipped: one dragon quest done', true);
+    this.g.hud.showBanner(!hadBook ? 'Skipped to: the dragons land' : 'Skipped: one dragon quest done', true);
   }
 
   reset() {
@@ -323,12 +351,17 @@ export class Story {
     // Ollie talks when you're near him (and at the very start)
     this.intro -= dt;
     const near = Math.hypot(player.x - this.ollie.x, player.z - this.ollie.z) < TALK_RANGE;
-    if ((near || this.intro > 0) && !this.g.riding) this.say(ollieSays(this.p));
+    this.holdSpeech -= dt;
+    if (this.unboxing !== null || this.holdSpeech > 0) {
+      // quiet while the treasure pours out; then his line about the book stays up a while
+    } else if ((near || this.intro > 0) && !this.g.riding) this.say(ollieSays(this.p));
     else if (this.speechShown) {
       this.speechShown = null;
       this.g.hud.showSpeech(null);
     }
+    this.ollie.cheering = this.unboxing !== null && this.unboxing > UNBOXING - 5;
     this.ollie.update(dt, t, player, !!this.speechShown);
+    this.updateBook(dt, t, player);
 
     // chapter 1: the first time a dragon flies close by
     if (this.p.chapter === 'treasure' && !this.p.sawDragon) {
@@ -356,12 +389,38 @@ export class Story {
         this.g.hud.showBanner('Look! The dragons are landing!', true);
       }
     }
-    if (!this.p.landed && this.p.chapter !== 'treasure' && this.g.dragons.list.every((d) => d.trusted || (d.grounded && !d.summon))) {
+    if (!this.p.landed && this.p.hasBook && this.g.dragons.list.every((d) => d.trusted || (d.grounded && !d.summon))) {
       this.set({ type: 'landed' });
     }
   }
 
+  // After the chest opens: the treasure pours out, a pause, then Ollie spots his Dragon Book in
+  // the chest and it pops out onto the ground. Picking it up brings the dragons down.
+  updateBook(dt, t, player) {
+    if (this.unboxing !== null) {
+      this.unboxing -= dt;
+      if (this.unboxing <= 0) {
+        this.unboxing = null;
+        const { chest } = this.g.hunt;
+        this.book.show(this.bookSpot(player), { x: chest.x + 0.5, y: GROUND + 0.8, z: chest.z + 0.5 });
+        this.say('Oh, look what else is in there! My Dragon Book!', true);
+        this.holdSpeech = 5;
+      }
+    }
+    this.book.update(dt, t);
+    if (!this.p.hasBook && this.book.landed && Math.hypot(player.x - this.book.spot.x, player.z - this.book.spot.z) < BOOK_RANGE) {
+      this.book.pickUp(this.g.player.object.position);
+      this.set({ type: 'gotBook' });
+      this.g.hud.showBookButton(() => this.openBook());
+      this.g.hud.showBanner('You found the Dragon Book! 📖', true);
+      this.say(ollieSays(this.p), true);
+      this.holdSpeech = 5;
+      this.landingAt = 2.5; // the dragons come down
+    }
+  }
+
   dispose() {
+    this.book.dispose();
     this.itemsView.dispose();
     this.ollie.dispose();
   }

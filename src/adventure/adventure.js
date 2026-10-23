@@ -2,8 +2,8 @@
 //
 // Chapter 1, 'treasure': Grandpa Ollie lost the 3 golden keys to his treasure chest. Dragons only
 //   fly overhead; they can't be reached yet.
-// Chapter 2, 'dragons': opening the chest finds the Dragon Book, and the three dragons (Ember,
-//   Glimmer, Frost) land around the world. Each one needs something before it will trust you.
+// Chapter 2, 'dragons': Ollie's Dragon Book pops out of the opened chest. Once the player picks it
+//   up, the three dragons (Ember, Glimmer, Frost) land around the world. Each one needs something before it will trust you.
 // The adventure is finished once all three dragons are your friends.
 
 export const CHAPTERS = ['treasure', 'dragons', 'done'];
@@ -20,6 +20,7 @@ export function newProgress() {
     chapter: 'treasure',
     keys: [], // indexes of the keys found
     chestOpen: false,
+    hasBook: false, // picked up the Dragon Book from beside the chest
     sawDragon: false, // the "was that a dragon?!" moment happened
     landed: false, // the dragons have come down
     accepted: {}, // kind → true once you've looked at that dragon in the Dragon Book
@@ -42,6 +43,8 @@ export function loadProgress(json) {
       ...base,
       ...p,
       chapter: CHAPTERS.includes(p.chapter) ? p.chapter : base.chapter,
+      // saves from before the book had to be picked up already have it
+      hasBook: typeof p.hasBook === 'boolean' ? p.hasBook : CHAPTERS.includes(p.chapter) && p.chapter !== 'treasure',
       keys: Array.isArray(p.keys) ? p.keys.filter((k) => Number.isInteger(k) && k >= 0 && k < 3) : [],
       accepted: { ...(p.accepted ?? {}) },
       carrying: ['egg', 'flower'].includes(p.carrying) ? p.carrying : null,
@@ -62,6 +65,7 @@ export function nextGoal(p) {
   }
   const friends = Object.keys(p.friends).length;
   if (p.chapter === 'dragons') {
+    if (!p.hasBook) return { icon: '📖', text: 'Pick up the Dragon Book' };
     if (p.carrying === 'egg') return { icon: '🥚', text: 'Bring the egg back to Ember' };
     if (p.carrying === 'flower') return { icon: '🌸', text: 'Bring the moon flower to Frost' };
     if (p.accepted.glimmer && !p.quests.glimmer) {
@@ -91,6 +95,7 @@ export function ollieSays(p) {
     if (n < 3) return `You found ${n === 1 ? 'one key' : 'two keys'}! Keep looking. Follow the golden lights!`;
     return 'You found all my keys! Now touch the treasure chest to open it!';
   }
+  if (p.chapter === 'dragons' && !p.hasBook) return "Go and pick up my Dragon Book! It's right by the chest.";
   if (p.chapter === 'dragons' && !p.landed) return 'My old Dragon Book! Look up! The dragons are coming down to land!';
   if (p.chapter === 'dragons') {
     if (!KINDS.some((k) => p.accepted[k])) return 'The dragons have landed! Walk up to a dragon and press E to look at it in your Dragon Book. Each one needs your help.';
@@ -111,6 +116,9 @@ export function apply(p, event) {
         q.chestOpen = true;
         q.chapter = 'dragons';
       }
+      break;
+    case 'gotBook':
+      if (q.chapter === 'dragons') q.hasBook = true;
       break;
     case 'sawDragon':
       q.sawDragon = true;
@@ -151,8 +159,11 @@ export function apply(p, event) {
       if (q.chapter === 'treasure') {
         q.keys = [0, 1, 2];
         q.chestOpen = true;
+        q.hasBook = true;
         q.sawDragon = true;
         q.chapter = 'dragons';
+      } else if (q.chapter === 'dragons' && !q.hasBook) {
+        q.hasBook = true;
       } else if (q.chapter === 'dragons') {
         const kind = KINDS.find((k) => !q.quests[k]);
         if (kind) {
@@ -167,5 +178,5 @@ export function apply(p, event) {
 }
 
 // Can this dragon be ridden / befriended yet?
-export const dragonsCanLand = (p) => p.chapter !== 'treasure';
+export const dragonsCanLand = (p) => p.chapter !== 'treasure' && p.hasBook;
 export const canBefriend = (p, kind) => p.chapter !== 'treasure' && !!p.quests[kind];

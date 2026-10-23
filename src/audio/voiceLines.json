@@ -15,6 +15,14 @@
   "voice": "ollie",
   "text": "You found all my keys! Now touch the treasure chest to open it!"
  },
+ "ollie_lookbook": {
+  "voice": "ollie",
+  "text": "Oh, look what else is in there! My Dragon Book!"
+ },
+ "ollie_getbook": {
+  "voice": "ollie",
+  "text": "Go and pick up my Dragon Book! It's right by the chest."
+ },
  "ollie_book": {
   "voice": "ollie",
   "text": "My old Dragon Book! Look up! The dragons are coming down to land!"

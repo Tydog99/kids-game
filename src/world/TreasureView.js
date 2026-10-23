@@ -13,7 +13,7 @@ const TREELINE = 6.5; // far-away beams float with their foot up here, above the
 const LAND_RANGE = 10; // over this last stretch before BEAM_MAX_DIST, a beam's foot comes down to the ground
 const MIN_BEAM_ANGLE = 0.006; // radians: beams never get thinner than this on screen
 const COINS = 1600;
-const POUR_SECONDS = 6;
+const POUR_SECONDS = 5;
 
 function beamMaterial(color) {
   return new THREE.ShaderMaterial({

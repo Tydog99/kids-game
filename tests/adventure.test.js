@@ -14,6 +14,12 @@ describe('adventure progress', () => {
     expect(ollieSays(p)).toMatch(/all my keys/);
     p = apply(p, { type: 'chestOpened' });
     expect(p.chapter).toBe('dragons');
+    // the Dragon Book pops out; the dragons wait until it's picked up
+    expect(dragonsCanLand(p)).toBe(false);
+    expect(nextGoal(p).text).toBe('Pick up the Dragon Book');
+    expect(ollieSays(p)).toMatch(/pick up my Dragon Book/);
+    p = apply(p, { type: 'gotBook' });
+    expect(p.hasBook).toBe(true);
     expect(dragonsCanLand(p)).toBe(true);
   });
 
@@ -35,6 +41,21 @@ describe('adventure progress', () => {
     const p = newProgress();
     apply(p, { type: 'key', index: 1 });
     expect(p.keys).toEqual([]);
+  });
+
+  it('saves from before the book had to be picked up already have it', () => {
+    expect(loadProgress(JSON.stringify({ chapter: 'dragons', chestOpen: true })).hasBook).toBe(true);
+    expect(loadProgress(JSON.stringify({ chapter: 'treasure' })).hasBook).toBe(false);
+    expect(loadProgress(JSON.stringify({ chapter: 'dragons', chestOpen: true, hasBook: false })).hasBook).toBe(false);
+  });
+
+  it('skipping while the book waits by the chest just picks it up', () => {
+    let p = apply(newProgress(), { type: 'skip' });
+    expect(p.hasBook).toBe(true);
+    p = { ...p, hasBook: false };
+    p = apply(p, { type: 'skip' });
+    expect(p.hasBook).toBe(true);
+    expect(Object.keys(p.quests)).toEqual([]);
   });
 
   it('loads saved progress and survives junk', () => {

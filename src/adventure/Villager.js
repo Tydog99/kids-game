@@ -9,6 +9,8 @@ export class Villager {
     this.z = z;
     this.heading = 0;
     this.wave = 0;
+    this.cheering = false; // both arms up, hopping for joy
+    this.cheer = 0;
     this.root.position.set(x, 0.25, z);
     scene.add(this.root);
     this.scene = scene;
@@ -25,6 +27,16 @@ export class Villager {
     this.root.rotation.y = this.heading;
     this.character.animate(0, 0, t);
     this.wave += ((talking ? 1 : 0) - this.wave) * Math.min(1, dt * 5);
+    this.cheer += ((this.cheering ? 1 : 0) - this.cheer) * Math.min(1, dt * 6);
+    this.root.position.y = 0.25 + this.cheer * Math.abs(Math.sin(t * 7)) * 0.18;
+    if (this.cheer > 0.01) {
+      const { armL, armR } = this.character.parts;
+      for (const [arm, side] of [[armL, -1], [armR, 1]]) {
+        arm.rotation.x = -2.8 * this.cheer;
+        arm.rotation.z = side * (0.35 + Math.sin(t * 7) * 0.15) * this.cheer;
+      }
+      return;
+    }
     if (this.wave > 0.01) {
       const arm = this.character.parts.armR;
       arm.rotation.x = -2.5 * this.wave;
