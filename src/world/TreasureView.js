@@ -9,13 +9,15 @@ const GROUND = 0.25;
 const BEAM_HEIGHT = 60;
 const BEAM_RADIUS = 0.22;
 const BEAM_MAX_DIST = 34; // beams farther than this are drawn closer (and smaller) so they're never clipped
+const TREELINE = 6.5; // far-away beams float with their foot up here, above the trees
+const LAND_RANGE = 10; // over this last stretch before BEAM_MAX_DIST, a beam's foot comes down to the ground
 const MIN_BEAM_ANGLE = 0.006; // radians: beams never get thinner than this on screen
 const COINS = 1600;
 const POUR_SECONDS = 6;
 
 function beamMaterial(color) {
   return new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: 1 }, uTime: { value: 0 }, uStrength: { value: 1 } },
+    uniforms: { uColor: { value: new THREE.Color(color) }, uOpacity: { value: 1 }, uTime: { value: 0 }, uStrength: { value: 1 }, uFloat: { value: 0 } },
     vertexShader: `
       varying float vH;
       varying float vEdge;
@@ -31,11 +33,13 @@ function beamMaterial(color) {
       uniform float uOpacity;
       uniform float uTime;
       uniform float uStrength;
+      uniform float uFloat; // 1 = floating above the trees: soft bottom edge, no glowing foot
       varying float vH;
       varying float vEdge;
       void main() {
         float core = pow(vEdge, 2.0);
-        float fade = pow(1.0 - vH, 0.7) * (1.0 + 0.6 * smoothstep(0.03, 0.0, vH));
+        float fade = pow(1.0 - vH, 0.7) * (1.0 + 0.6 * (1.0 - uFloat) * smoothstep(0.03, 0.0, vH));
+        fade *= mix(1.0, smoothstep(0.0, 0.12, vH), uFloat);
         float shimmer = 0.85 + 0.15 * sin(vH * 120.0 - uTime * 6.0);
         gl_FragColor = vec4(uColor * (0.85 + 0.35 * core) * shimmer, min(1.0, core * fade * uOpacity * uStrength));
       }`,
@@ -153,18 +157,23 @@ export class TreasureView {
   }
 
   // Keep a beam visible at any distance: past the view range, slide it toward the camera and
-  // shrink it by the same factor (so the top looks the same), and never let it get too thin.
-  // Its foot always stands on the ground at the edge of the visible world, so it meets the
-  // horizon instead of hanging in the sky.
+  // shrink it by the same factor (so it looks the same size), and never let it get too thin.
+  // Far away its foot floats above the treeline, so it doesn't slide across the ground and trees as
+  // you approach; over the last stretch it comes down to touch the ground at its real spot.
   placeBeam(beam, camera) {
     const base = beam.userData.base;
     const cam = camera.position;
     const d = Math.hypot(base.x - cam.x, base.z - cam.z);
     const s = d > BEAM_MAX_DIST ? BEAM_MAX_DIST / d : 1;
     const widen = Math.max(1, (d * MIN_BEAM_ANGLE) / BEAM_RADIUS);
+    const k = Math.min(1, Math.max(0, (d - (BEAM_MAX_DIST - LAND_RANGE)) / LAND_RANGE));
+    const lift = k * k * (3 - 2 * k); // 0 close up, 1 far away
+    const footWorld = base.y + (TREELINE - base.y) * lift;
+    const foot = cam.y + (footWorld - cam.y) * s;
     const top = cam.y + (base.y + BEAM_HEIGHT - cam.y) * s; // where the real beam's top appears
-    beam.position.set(cam.x + (base.x - cam.x) * s, base.y, cam.z + (base.z - cam.z) * s);
-    beam.scale.set(s * widen, (top - base.y) / BEAM_HEIGHT, s * widen);
+    beam.position.set(cam.x + (base.x - cam.x) * s, foot, cam.z + (base.z - cam.z) * s);
+    beam.scale.set(s * widen, Math.max(0.001, (top - foot) / BEAM_HEIGHT), s * widen);
+    beam.material.uniforms.uFloat.value = lift;
     // see-through up close (so the key shows inside it), solid when far away and thin
     beam.material.uniforms.uStrength.value = Math.min(1.1, 0.45 + d / 60);
   }

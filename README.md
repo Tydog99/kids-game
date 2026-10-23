@@ -66,8 +66,10 @@ effects. The lines are listed in `src/audio/voiceLines.json`; `scripts/make-voic
 them. Voice models:
 
 - *Northern English Male* (Grandpa Ollie), CC BY-SA 4.0
-- *Alba* (narrator, Glimmer, Frost), CC BY 4.0
+- *Alba* (narrator), CC BY 4.0
 - *Joe* (Ember), CC0
+- *Kristin* (Glimmer), public domain
+- *Norman* (Frost), public domain
 
 Lines without a recording, such as ones using a dragon's chosen name, use the browser's voice.
 

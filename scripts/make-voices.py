@@ -11,6 +11,8 @@ Voice models (from huggingface.co/rhasspy/piper-voices):
   en_GB-northern_english_male-medium  CC BY-SA 4.0
   en_GB-alba-medium                   CC BY 4.0
   en_US-joe-medium                    CC0
+  en_US-kristin-medium                public domain
+  en_US-norman-medium                 public domain
 """
 import json, os, subprocess, sys, tempfile
 
@@ -24,18 +26,20 @@ VOICES = {
     'narrator': ('en_GB-alba-medium', 1.0, 'anull'),
     # big and rumbly, with a little cave echo
     'ember': ('en_US-joe-medium', 1.05, 'asetrate=22050*0.78,aresample=22050,atempo=1.28,aecho=0.8:0.5:45:0.25,bass=g=4'),
-    # small and squeaky-cute
-    'glimmer': ('en_GB-alba-medium', 0.95, 'asetrate=22050*1.28,aresample=22050,atempo=0.78'),
-    # calm and cool, with an icy echo
-    'frost': ('en_GB-alba-medium', 1.12, 'asetrate=22050*0.93,aresample=22050,atempo=1.075,aecho=0.8:0.6:110|230:0.35|0.18,highpass=f=140'),
+    # small and squeaky-cute (a different voice from the narrator, so they're never confused)
+    'glimmer': ('en_US-kristin-medium', 0.92, 'asetrate=22050*1.3,aresample=22050,atempo=0.77'),
+    # calm, wise and cool, with an icy echo
+    'frost': ('en_US-norman-medium', 1.15, 'asetrate=22050*0.96,aresample=22050,atempo=1.04,aecho=0.8:0.6:110|230:0.35|0.18,highpass=f=120'),
 }
 
 
-def main(models):
+def main(models, only=None):
     os.makedirs(OUT, exist_ok=True)
     lines = json.load(open(os.path.join(ROOT, 'src', 'audio', 'voiceLines.json')))
     piper = os.path.join(os.path.dirname(sys.executable), 'piper')
     for line_id, line in lines.items():
+        if only and line['voice'] not in only:
+            continue
         model, scale, filt = VOICES[line['voice']]
         with tempfile.TemporaryDirectory() as tmp:
             wav = os.path.join(tmp, 'raw.wav')
@@ -50,4 +54,5 @@ def main(models):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    # optional: only re-record some voices, e.g. `make-voices.py <folder> glimmer frost`
+    main(sys.argv[1], set(sys.argv[2:]) or None)
