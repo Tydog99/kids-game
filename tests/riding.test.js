@@ -98,3 +98,16 @@ describe('trust', () => {
     expect(cleanName('', 'frost')).toBe('Snowflake');
   });
 });
+
+describe('RideMotor on melting ice', () => {
+  it('lifts into a hover when the ground under it melts', () => {
+    let melted = false;
+    const tile = (x, z) => (melted && z >= 5 && z <= 6 ? { top: 1.2, land: false } : { top: GROUND_Y, land: true });
+    const m = new RideMotor({ x: 5.5, z: 5.5 }, tile);
+    expect(m.grounded).toBe(true);
+    melted = true;
+    run(m, 1, {});
+    expect(m.grounded).toBe(false);
+    expect(m.y).toBeGreaterThanOrEqual(1.2);
+  });
+});

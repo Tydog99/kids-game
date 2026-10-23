@@ -64,6 +64,8 @@ export class RideMotor {
     this.turnRate = smooth(this.turnRate, turn * RIDE.turn, 10, dt);
     this.heading += this.turnRate * dt;
 
+    // the ground melted away (lake ice): lift into a hover
+    if (this.grounded && !this.canLand(this.x, this.z)) this.grounded = false;
     if (this.grounded && intent.up) {
       this.grounded = false;
       this.vy = RIDE.climb;

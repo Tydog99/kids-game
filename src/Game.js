@@ -212,10 +212,33 @@ export class Game {
     const d = this.riding?.dragon;
     if (!d?.breath) return;
     const kind = d.spec.breath;
+    // the cold (or heat) also reaches the water right under the dragon's neck and head, so a
+    // frozen path starts at the shore instead of where the breath first lands
+    if (d.breathing && d.breathOpen > 0.5 && (kind === 'ice' || kind === 'fire') && this.riding.y < 3) {
+      const mouth = d.mouth.getWorldPosition(this.tmpMouth ?? (this.tmpMouth = new THREE.Vector3()));
+      const r = this.riding;
+      for (let k = 0.3; k <= 1.001; k += 0.1) {
+        const x = r.x + (mouth.x - r.x) * k, z = r.z + (mouth.z - r.z) * k;
+        const c = this.env.hitGround(Math.floor(x), Math.floor(z), kind);
+        if (c) this.envView.setLakeIce(c.tile, c.x, c.z, c.to === 'ice');
+      }
+    }
     for (const P of d.breath.particles) {
       if (P.used) continue;
-      const obj = this.env.at(Math.floor(P.p.x), Math.floor(P.p.z));
-      if (!obj || P.p.y > ENV_TOP[obj.type]) continue;
+      const tx = Math.floor(P.p.x), tz = Math.floor(P.p.z);
+      const obj = this.env.at(tx, tz);
+      if (!obj) {
+        // breath passing over a lake: ice freezes the water, fire melts lake ice
+        if (P.p.y < (kind === 'fire' ? 4 : 6)) {
+          const c = this.env.hitGround(tx, tz, kind);
+          if (c) {
+            P.used = true;
+            this.envView.setLakeIce(c.tile, c.x, c.z, c.to === 'ice');
+          }
+        }
+        continue;
+      }
+      if (P.p.y > ENV_TOP[obj.type]) continue;
       // breath that can't change this thing (fire on fire, diamonds on diamond) carries on past it
       const change = this.env.hit(obj, kind);
       if (!change) continue;
@@ -362,10 +385,7 @@ export class Game {
     const d = this.riding;
     const m = this.player.motor;
     // step off beside the dragon onto open ground
-    const fits = (x, z) => {
-      const tile = this.walkable(Math.floor(x), Math.floor(z));
-      return tile === true && d.distanceTo(x, z) > 0.35;
-    };
+    const fits = (x, z) => this.walkable(Math.floor(x), Math.floor(z)) === true && m.fits(x, z) && d.distanceTo(x, z) > 0.35;
     let spot = null;
     for (let r = d.bodyR + 1.6; r < d.bodyR + 5 && !spot; r += 0.5)
       for (let i = 0; i < 16 && !spot; i++) {

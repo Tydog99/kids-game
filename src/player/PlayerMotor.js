@@ -50,11 +50,13 @@ export class PlayerMotor {
   // Moves each axis separately so the player slides along walls. Returns distance moved.
   move(dx, dz) {
     let moved = 0;
-    if (dx && this.fits(this.px + dx, this.pz)) {
+    // if the ground melted away right under the player, let them walk off it
+    const stuck = this.isWalkable(Math.floor(this.px), Math.floor(this.pz)) === false;
+    if (dx && (stuck || this.fits(this.px + dx, this.pz))) {
       this.px += dx;
       moved += Math.abs(dx);
     }
-    if (dz && this.fits(this.px, this.pz + dz)) {
+    if (dz && (stuck || this.fits(this.px, this.pz + dz))) {
       this.pz += dz;
       moved += Math.abs(dz);
     }

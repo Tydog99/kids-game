@@ -6,6 +6,9 @@
 //   frozen  →  burning     –           diamond     shatters (gone)
 //   diamond →  –           –           –           –
 //
+// Lakes: ice breath freezes water one tile at a time into ice you can walk on (it doesn't spread),
+// and fire melts it back into water.
+//
 // Burning things light their direct neighbours once after SPREAD_DELAY (so a fire front moves at a
 // steady pace, one tile per SPREAD_DELAY), then burn away. Spreading fire only catches normal
 // things: ice and diamond act as firebreaks. The tree wall around the map edge is never affected.
@@ -75,6 +78,23 @@ export class Environment {
     if (kind === 'fire') return obj.state === 'burning' ? null : this.set(obj, 'burning');
     if (kind === 'ice') return obj.state === 'frozen' ? null : this.set(obj, 'frozen');
     if (kind === 'diamonds') return this.set(obj, 'diamond');
+    return null;
+  }
+
+  // Breath reached the ground at (x, z): freeze water, or melt lake ice.
+  // Returns { tile, x, z, to: 'ice' | 'water' } or null.
+  hitGround(x, z, kind) {
+    if (x < 0 || z < 0 || x >= this.world.width || z >= this.world.height) return null;
+    const i = z * this.world.width + x;
+    const t = this.world.tiles[i];
+    if (kind === 'ice' && t === T.WATER) {
+      this.world.tiles[i] = T.ICE;
+      return { tile: i, x, z, to: 'ice' };
+    }
+    if (kind === 'fire' && t === T.ICE) {
+      this.world.tiles[i] = T.WATER;
+      return { tile: i, x, z, to: 'water' };
+    }
     return null;
   }
 

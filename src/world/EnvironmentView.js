@@ -81,6 +81,19 @@ export class EnvironmentView {
     this.ash.count = 0;
     this.ash.receiveShadow = true;
     this.group.add(this.ash);
+    // frozen lake tiles: icy slabs sitting on the water
+    this.lake = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1, 0.17, 1),
+      new THREE.MeshPhongMaterial({ color: '#ffffff', emissive: '#7fb8d8', emissiveIntensity: 0.45, specular: '#ffffff', shininess: 140 }),
+      4096,
+    );
+    this.lake.count = 0;
+    this.lake.receiveShadow = true;
+    this.lake.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(4096 * 3), 3);
+    this.lake.frustumCulled = false;
+    this.group.add(this.lake);
+    this.lakeSlots = new Map(); // tile index → instance slot
+    this.lakeTiles = []; // slot → tile index
     this.light = new THREE.PointLight('#ff7a2a', 0, 14, 1.4);
     this.group.add(this.light);
     this.time = 0;
@@ -165,6 +178,48 @@ export class EnvironmentView {
         life: rand(1.2, 2),
       });
     }
+  }
+
+  // A lake tile froze (on = true) or melted (on = false).
+  setLakeIce(tile, x, z, on) {
+    const L = this.lake;
+    if (on) {
+      if (this.lakeSlots.has(tile) || L.count >= L.instanceMatrix.count) return;
+      const slot = L.count++;
+      this.lakeSlots.set(tile, slot);
+      this.lakeTiles[slot] = tile;
+      L.setMatrixAt(slot, new THREE.Matrix4().makeTranslation(x + 0.5, 0.17, z + 0.5));
+      // a little variation in the ice color
+      const tints = ['#f4fbff', '#e6f6ff', '#ffffff', '#dcf2fd'];
+      L.setColorAt(slot, new THREE.Color(tints[(x * 7 + z * 3) % tints.length]));
+    } else {
+      const slot = this.lakeSlots.get(tile);
+      if (slot === undefined) return;
+      // move the last slab into the freed slot
+      const last = --L.count;
+      const m = new THREE.Matrix4(), c = new THREE.Color();
+      L.getMatrixAt(last, m);
+      L.getColorAt(last, c);
+      L.setMatrixAt(slot, m);
+      L.setColorAt(slot, c);
+      const moved = this.lakeTiles[last];
+      this.lakeSlots.set(moved, slot);
+      this.lakeTiles[slot] = moved;
+      this.lakeSlots.delete(tile);
+      this.lakeTiles.length = L.count;
+      // a puff of steam where it melted
+      for (let i = 0; i < 6; i++)
+        this.flames.spawn({
+          pos: new THREE.Vector3(x + Math.random(), 0.3, z + Math.random()),
+          vel: new THREE.Vector3(rand(-0.2, 0.2), rand(0.8, 1.6), rand(-0.2, 0.2)),
+          size: rand(0.15, 0.3),
+          age: 0.6,
+          life: 1.6,
+          seed: 1,
+        });
+    }
+    L.instanceMatrix.needsUpdate = true;
+    L.instanceColor.needsUpdate = true;
   }
 
   // burning: the burning objects (from Environment)
@@ -259,5 +314,6 @@ export class EnvironmentView {
     this.flames.mesh.geometry.dispose();
     this.shards.mesh.geometry.dispose();
     this.ash.geometry.dispose();
+    this.lake.geometry.dispose();
   }
 }

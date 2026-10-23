@@ -83,3 +83,22 @@ describe('PlayerMotor', () => {
     expect(Math.hypot(m.px - 5.5, m.pz - 7.5)).toBeGreaterThanOrEqual(trunk + RADIUS - 1e-6);
   });
 });
+
+describe('PlayerMotor on melting ground', () => {
+  it('can walk off a tile that stopped being walkable underneath it', () => {
+    let melted = false;
+    const ground = (x, z) => !(melted && x === 5 && z === 5);
+    const m = new PlayerMotor({ x: 5, z: 5, facing: 2 }, ground);
+    melted = true;
+    for (let i = 0; i < 60; i++) m.update(1 / 60, { forward: true, back: false, left: false, right: false });
+    expect(m.z).toBeGreaterThan(5); // walked off the melted tile
+  });
+
+  it('is not let onto water just because its edge overlaps it', () => {
+    const shore = (x) => x < 6; // water from x = 6
+    const m = new PlayerMotor({ x: 5, z: 5, facing: 1 }, shore); // facing east, toward the water
+    m.px = 5.85; // edge already over the water
+    for (let i = 0; i < 60; i++) m.update(1 / 60, { forward: true, back: false, left: false, right: false });
+    expect(m.px).toBeLessThan(6);
+  });
+});

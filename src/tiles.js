@@ -8,6 +8,7 @@ export const T = {
   LAVA: 6,
   TREE: 7,
   BUILDING: 8,
+  ICE: 9, // a frozen lake tile (made by ice breath), walkable
 };
 
 // height: top surface of the tile in world units (1 tile = 1 unit).
@@ -21,6 +22,7 @@ export const TILE_INFO = {
   [T.LAVA]: { walkable: false, height: 0.125, colors: ['#ff5a1f', '#ff7a1a', '#ff9a2a'] },
   [T.TREE]: { walkable: false, height: 0.25, colors: ['#4fae4f', '#5cb85c'] },
   [T.BUILDING]: { walkable: false, height: 0.25, colors: ['#bd955a', '#c8a165'] },
+  [T.ICE]: { walkable: true, height: 0.25, colors: ['#d4f1ff', '#c2e8fb', '#e2f6ff'] },
 };
 
 export const isWalkableTile = (t) => TILE_INFO[t].walkable;

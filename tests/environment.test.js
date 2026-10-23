@@ -93,3 +93,26 @@ describe('Environment', () => {
     expect(b.state).toBe('gone');
   });
 });
+
+describe('frozen lakes', () => {
+  const lake = () => {
+    const w = makeWorld();
+    for (let z = 30; z < 34; z++) for (let x = 10; x < 20; x++) w.tiles[z * w.width + x] = T.WATER;
+    return w;
+  };
+
+  it('ice freezes one water tile into walkable ice; fire melts it back', () => {
+    const w = lake();
+    const env = new Environment(w);
+    expect(env.hitGround(12, 31, 'fire')).toBeNull(); // fire does nothing to water
+    expect(env.hitGround(12, 31, 'ice')).toMatchObject({ to: 'ice' });
+    expect(w.tiles[31 * w.width + 12]).toBe(T.ICE);
+    expect(w.tiles[31 * w.width + 13]).toBe(T.WATER); // ice doesn't spread
+    run(env, 30);
+    expect(w.tiles[31 * w.width + 13]).toBe(T.WATER);
+    expect(env.hitGround(12, 31, 'ice')).toBeNull(); // already ice
+    expect(env.hitGround(12, 31, 'fire')).toMatchObject({ to: 'water' });
+    expect(w.tiles[31 * w.width + 12]).toBe(T.WATER);
+    expect(env.hitGround(5, 5, 'ice')).toBeNull(); // grass isn't affected
+  });
+});
