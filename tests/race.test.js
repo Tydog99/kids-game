@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { raceCourse, START, PITCH, HOOPS, passes, pitchTile, towers, formatTime } from '../src/race/course.js';
+import { raceCourse, START, PITCH, HOOPS, LAP_RINGS, passes, pitchTile, towers, formatTime } from '../src/race/course.js';
 import { RIDE } from '../src/creatures/rideMotor.js';
 
 describe('Sky Pitch race', () => {
   const rings = raceCourse();
 
   it('goes around the pitch, then down the middle and through the tall middle hoop', () => {
-    expect(rings.length).toBe(17);
+    expect(rings.length).toBe(LAP_RINGS + 3);
     const goal = rings.at(-1);
     expect(goal.goal).toBe(true);
     expect(HOOPS.some((h) => h.x === goal.x && h.z === goal.z && h.height === goal.y)).toBe(true);
     // the middle run is straight down the centre line
-    for (const r of rings.slice(12, 16)) expect(r.z).toBe(0);
+    for (const r of rings.slice(LAP_RINGS)) expect(r.z).toBe(0);
   });
 
   it('every ring is reachable: inside the wall, clear of the towers, under the flying ceiling', () => {
@@ -23,12 +23,12 @@ describe('Sky Pitch race', () => {
     }
   });
 
-  it('rings are spaced so a dragon can turn and climb from one to the next', () => {
+  it('rings are well spaced out, and a dragon can turn and climb from one to the next', () => {
     let prev = START;
     for (const r of rings) {
       const d = Math.hypot(r.x - prev.x, r.z - prev.z);
-      expect(d).toBeGreaterThan(6);
-      expect(d).toBeLessThan(25);
+      expect(d).toBeGreaterThan(15);
+      expect(d).toBeLessThan(28);
       // climbing at full rate while flying at full speed covers the height change
       expect(Math.abs(r.y - prev.y) / RIDE.climb).toBeLessThan(d / RIDE.fly + 0.2);
       prev = r;

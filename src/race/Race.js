@@ -4,7 +4,7 @@
 // countdown → fly through the golden rings around the pitch, then down the middle and through the
 // tall goal hoop → fireworks and your time → a flash, and you're back by the magic ring.
 import * as THREE from 'three';
-import { raceCourse, START, passes, pitchTile, formatTime } from './course.js';
+import { raceCourse, START, LAP_RINGS, passes, pitchTile, formatTime } from './course.js';
 import { SkyPitch } from './SkyPitch.js';
 import { MagicRing, MAGIC_RADIUS } from './MagicRing.js';
 import { speakLine } from '../ui/speak.js';
@@ -13,7 +13,6 @@ import { music } from '../audio/Music.js';
 const ARRIVE_WAIT = 2.6; // seconds after arriving before the countdown starts
 const COUNT = 3; // the countdown
 const PARTY = 6; // seconds of fireworks at the finish before going home
-const LAP_RINGS = 12; // rings around the pitch; then the run down the middle
 const VIEW = { near: 45, far: 110 }; // how far you can see at the pitch
 const FIREWORK_COLOURS = ['#ff5a5a', '#ffd23f', '#6fe0ff', '#9dff7a', '#ff8af0'];
 

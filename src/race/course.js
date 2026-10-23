@@ -18,6 +18,7 @@ export const HOOPS = [-1, 1].flatMap((end) =>
   [-5, 0, 5].map((z) => ({ x: end * (PITCH.a - 4), z, height: z === 0 ? 9 : 6.5, radius: z === 0 ? 2.4 : 1.8 })),
 );
 
+export const LAP_RINGS = 8; // rings around the pitch; then a few down the middle
 export const RING_RADIUS = 2.6; // the race rings (big, for small hands)
 export const PASS_RADIUS = 3.1; // flying this close to a ring's centre counts as through it
 
@@ -25,15 +26,24 @@ export const PASS_RADIUS = 3.1; // flying this close to a ring's centre counts a
 // and through the tall middle goal hoop at the far end.
 export function raceCourse() {
   const rings = [];
-  const ax = PITCH.a + 1, bz = PITCH.b - 3;
-  // around the oval (outside the goal hoops at the ends), starting near the west end
-  const laps = 12;
-  for (let i = 0; i < laps; i++) {
-    const th = Math.PI + 0.8 + (i / (laps - 1)) * Math.PI * 2 * 0.8;
-    rings.push({ x: Math.cos(th) * ax, z: -Math.sin(th) * bz, y: 5 + Math.sin(i * 1.7) * 1.2 });
+  const ax = PITCH.a + 4, bz = PITCH.b;
+  // around the oval (outside the goal hoops at the ends), starting near the west end, well apart
+  // (evenly spaced along the oval, not by angle, so no two are bunched up at the ends)
+  const at = (th) => ({ x: Math.cos(th) * ax, z: -Math.sin(th) * bz });
+  const from = Math.PI + 0.8, span = Math.PI * 2 * 0.8, steps = 400;
+  const path = [{ ...at(from), len: 0 }];
+  for (let k = 1; k <= steps; k++) {
+    const p = at(from + (k / steps) * span), q = path[k - 1];
+    path.push({ ...p, len: q.len + Math.hypot(p.x - q.x, p.z - q.z) });
+  }
+  const total = path[steps].len;
+  for (let i = 0; i < LAP_RINGS; i++) {
+    const want = (i / (LAP_RINGS - 1)) * total;
+    const p = path.find((q) => q.len >= want - 1e-9) ?? path[steps];
+    rings.push({ x: p.x, z: p.z, y: 5 + Math.sin(i * 1.7) * 1.2 });
   }
   // then through the middle, low and fast, to the big hoop at the east end
-  [-18, -6, 6, 18].forEach((x, i) => rings.push({ x, z: 0, y: 4.5 + i * 0.9 }));
+  [-14, 8].forEach((x, i) => rings.push({ x, z: 0, y: 5 + i * 1.5 }));
   const goal = HOOPS.find((h) => h.x > 0 && h.z === 0);
   rings.push({ x: goal.x, z: goal.z, y: goal.height, goal: true });
   // each ring faces along the course
