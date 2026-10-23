@@ -1,11 +1,10 @@
-// Plays the theme (score.js) with a tiny 8-bit style synth: a square-wave lead, a thin pulse-wave
+// Plays a theme (score.js) with a tiny 8-bit style synth: a square or pulse-wave lead, a thin pulse-wave
 // arpeggio, a triangle bass and noise drums. Notes are scheduled a little ahead of time so the
 // rhythm stays steady. Browsers only allow sound after a click or key press, so call unlock()
 // from one; the music starts then.
-import { buildEvents, freq, EIGHTH, BAR, LOOP } from './score.js';
+import { buildEvents, freq, theme as findTheme, eighthSeconds, loopLength } from './score.js';
 
 const LOOKAHEAD = 0.25; // seconds of music scheduled ahead
-const BARS = LOOP / BAR;
 
 // A pulse wave with the given duty cycle (0.5 = square), as Fourier terms.
 function pulseWave(ctx, duty) {
@@ -19,13 +18,28 @@ export class Music {
     this.volume = 6; // 0..10
     this.night = false;
     this.ctx = null;
-    // events grouped by bar, for day and night arrangements
-    this.bars = {};
-    for (const night of [false, true]) {
-      const byBar = Array.from({ length: BARS }, () => []);
-      for (const e of buildEvents({ night })) byBar[Math.floor(e.t / BAR)].push(e);
-      this.bars[night] = byBar;
+    this.cache = new Map();
+    this.previewNight = null; // the music picker can preview day or night
+    this.setTheme('hero');
+  }
+
+  // Events grouped by bar, for a theme's day or night arrangement.
+  barsFor(th, night) {
+    const key = `${th.id}:${night}`;
+    if (!this.cache.has(key)) {
+      const byBar = Array.from({ length: th.progression.length }, () => []);
+      for (const e of buildEvents(th, { night })) byBar[Math.floor(e.t / th.bar)].push(e);
+      this.cache.set(key, byBar);
     }
+    return this.cache.get(key);
+  }
+
+  // Switch to another theme; it starts from its first bar at the next barline.
+  setTheme(id) {
+    const th = findTheme(id);
+    if (th === this.theme) return;
+    this.theme = th;
+    this.bar = 0;
   }
 
   // Call from a click or key press.
@@ -48,7 +62,7 @@ export class Music {
     this.master = ctx.createGain();
     this.master.gain.value = this.level();
     this.master.connect(this.comp).connect(ctx.destination);
-    this.waves = { arp: pulseWave(ctx, 0.25) };
+    this.waves = { arp: pulseWave(ctx, 0.25), pulse: pulseWave(ctx, 0.25) };
     // a second of white noise for the drums
     this.noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const data = this.noise.getChannelData(0);
@@ -82,18 +96,20 @@ export class Music {
     // after the tab was in the background, start again from now rather than catching up
     if (this.barTime < ctx.currentTime - 0.5) this.barTime = ctx.currentTime + 0.05;
     while (this.barTime < ctx.currentTime + LOOKAHEAD) {
-      const night = this.night;
-      for (const e of this.bars[night][this.bar]) this.play(e, this.barTime + (e.t - this.bar * BAR) * EIGHTH, night);
-      this.bar = (this.bar + 1) % BARS;
-      this.barTime += BAR * EIGHTH;
+      const th = this.theme, night = this.previewNight ?? this.night;
+      const bars = this.barsFor(th, night), eighth = eighthSeconds(th);
+      this.bar %= bars.length;
+      for (const e of bars[this.bar]) this.play(e, this.barTime + (e.t - this.bar * th.bar) * eighth, night, eighth);
+      this.bar = (this.bar + 1) % bars.length;
+      this.barTime += th.bar * eighth;
     }
   }
 
-  play(e, time, night) {
-    const dur = e.dur * EIGHTH;
+  play(e, time, night, eighth) {
+    const dur = e.dur * eighth;
     switch (e.voice) {
       case 'lead':
-        return this.tone(time, dur * 0.92, freq(e.note), night ? 'triangle' : 'square', (night ? 0.2 : 0.075) * e.vel, true);
+        return this.tone(time, dur * e.gate, freq(e.note), this.waves[e.wave] ?? e.wave, e.gain * e.vel, true);
       case 'arp':
         return this.tone(time, dur * 0.8, freq(e.note), this.waves.arp, (night ? 0.035 : 0.03) * e.vel, false);
       case 'bass':

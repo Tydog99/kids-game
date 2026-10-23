@@ -5,6 +5,7 @@ import { Game } from './Game.js';
 import { DragonViewer } from './creatures/DragonViewer.js';
 import { openOptionsMenu } from './ui/OptionsMenu.js';
 import { music } from './audio/Music.js';
+import { openMusicPicker } from './ui/MusicPicker.js';
 import { load } from './ui/storage.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -20,6 +21,7 @@ let mode;
 // Music starts on the first click or key press (browsers don't allow sound before that).
 const savedVolume = Number(load('music', '6'));
 music.setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10 ? savedVolume : 6);
+music.setTheme(load('musicTheme', 'hero'));
 const unlockMusic = () => music.unlock();
 addEventListener('pointerdown', unlockMusic);
 addEventListener('keydown', unlockMusic);
@@ -53,7 +55,7 @@ function startGame(seed, characterId, gameMode) {
 }
 
 function openOptions() {
-  openOptionsMenu({ onDragons: openDragons });
+  openOptionsMenu({ onDragons: openDragons, onMusic: openMusicPicker });
 }
 
 // Dragon Designs opens on top of whatever is running; Back returns to it exactly as it was.

@@ -1,5 +1,5 @@
 // The game's Options menu: a small panel of extra things to open.
-export function openOptionsMenu({ onDragons }) {
+export function openOptionsMenu({ onDragons, onMusic }) {
   const el = document.createElement('div');
   el.className = 'options-menu';
   el.innerHTML = `
@@ -11,6 +11,10 @@ export function openOptionsMenu({ onDragons }) {
       <button class="options-item" type="button" data-item="dragons">
         <span class="options-icon" aria-hidden="true">🐉</span>
         <span><strong>Dragon Designs</strong><br /><small>See Ember, Glimmer and Frost walk, fly and breathe fire, diamonds and ice.</small></span>
+      </button>
+      <button class="options-item" type="button" data-item="music">
+        <span class="options-icon" aria-hidden="true">🎵</span>
+        <span><strong>Music</strong><br /><small>Listen to the five themes and pick the one you like.</small></span>
       </button>
     </div>`;
   document.body.appendChild(el);
@@ -30,6 +34,10 @@ export function openOptionsMenu({ onDragons }) {
   el.querySelector('[data-item=dragons]').onclick = () => {
     close();
     onDragons();
+  };
+  el.querySelector('[data-item=music]').onclick = () => {
+    close();
+    onMusic();
   };
   el.querySelector('[data-item=dragons]').focus();
   return close;

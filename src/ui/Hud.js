@@ -67,6 +67,13 @@ export class Hud {
     this.slider('#meteors', meteorIndex, (i) => METEOR_RATES[i].label, onMeteorRate);
     this.slider('#dragons', dragonCount, (n) => (n === 0 ? 'None' : String(n)), onDragonCount);
     this.slider('#music', musicVolume, (n) => (n === 0 ? 'Off' : String(n)), onMusicVolume);
+    // the music picker can switch the music back on
+    this.onMusicVolume = (e) => {
+      const input = this.el.querySelector('#music');
+      input.value = e.detail;
+      this.el.querySelector('output[for="music"]').textContent = String(e.detail);
+    };
+    addEventListener('music-volume', this.onMusicVolume);
 
     this.hint = this.el.querySelector('.hint');
     this.banner = this.el.querySelector('.banner');
@@ -234,6 +241,7 @@ export class Hud {
   }
 
   dispose() {
+    removeEventListener('music-volume', this.onMusicVolume);
     this.el.remove();
   }
 }
