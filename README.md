@@ -57,3 +57,17 @@ seed. A link can also open a world directly: `?seed=pallet` or `#pallet`.
 | `src/creatures/` | Dragon designs (`dragonModels.js`) and their rig and poses (`Dragon.js`). |
 
 `npm test` runs the unit tests (world generation, movement, voxel grid, RNG).
+
+## Voices
+
+The spoken lines (Grandpa Ollie, the narrator and the dragons) are recordings made with
+[Piper](https://github.com/rhasspy/piper), an open-source text-to-speech engine, and ffmpeg
+effects. The lines are listed in `src/audio/voiceLines.json`; `scripts/make-voices.py` re-records
+them. Voice models:
+
+- *Northern English Male* (Grandpa Ollie), CC BY-SA 4.0
+- *Alba* (narrator, Glimmer, Frost), CC BY 4.0
+- *Joe* (Ember), CC0
+
+Lines without a recording, such as ones using a dragon's chosen name, use the browser's voice.
+

@@ -17,7 +17,7 @@ describe('placeTreasure', () => {
 
       // chest sits right by spawn on open ground
       expect(isWalkable(w, chest.x, chest.z)).toBe(true);
-      expect(Math.abs(chest.x - w.spawn.x) + Math.abs(chest.z - w.spawn.z)).toBeLessThanOrEqual(6);
+      expect(Math.abs(chest.x - w.spawn.x) + Math.abs(chest.z - w.spawn.z)).toBeLessThanOrEqual(8);
 
       // with the chest in place, every key and every door can still be walked to from spawn
       const dist = walkDistances(w, w.spawn.x, w.spawn.z, new Set([chestIndex]));

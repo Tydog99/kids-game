@@ -10,7 +10,7 @@ for (const [name, page] of Object.entries(PAGES)) {
   const outDir = `.single-build/${name}`;
   await build({
     logLevel: 'warn',
-    build: { outDir, emptyOutDir: true, rollupOptions: { input: page, output: { inlineDynamicImports: true } } },
+    build: { outDir, emptyOutDir: true, assetsInlineLimit: 1e8, rollupOptions: { input: page, output: { inlineDynamicImports: true } } },
   });
   const assets = `${outDir}/assets`;
   const files = readdirSync(assets);

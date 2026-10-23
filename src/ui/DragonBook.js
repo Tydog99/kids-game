@@ -4,7 +4,7 @@ import { Dragon } from '../creatures/Dragon.js';
 import { DRAGONS } from '../creatures/dragonModels.js';
 import { DRAGON_NEEDS } from '../adventure/adventure.js';
 import { addLights } from '../scene.js';
-import { speak, stopSpeaking } from './speak.js';
+import { speak, speakLine, stopSpeaking } from './speak.js';
 
 const pictures = {};
 
@@ -49,6 +49,13 @@ function hint(kind, p) {
   return `Follow the ${LIGHT[kind]} light.`;
 }
 
+// The recorded line for hint() (see audio/voiceLines.json).
+function hintLine(kind, p) {
+  if (kind === 'ember') return p.carrying === 'egg' ? 'n_has_egg' : 'n_hint_ember';
+  if (kind === 'frost') return p.carrying === 'flower' ? 'n_has_flower' : 'n_hint_frost';
+  return p.gems.length >= 5 ? 'n_has_gems' : `n_hint_glimmer${p.gems.length}`;
+}
+
 // dragons: [{ kind, name, status }]; progress: adventure progress. start: kind to open at.
 export function openDragonBook({ dragons, progress, start, onClose = () => {} }) {
   const el = document.createElement('div');
@@ -90,7 +97,12 @@ export function openDragonBook({ dragons, progress, start, onClose = () => {} })
         }
         <button class="read-aloud" type="button">🔊 Read to me</button>
       </div>`;
-    page.querySelector('.read-aloud').onclick = () => speak(page.querySelector('.book-words').innerText.replace('🔊 Read to me', ''));
+    // the dragon says what it needs in its own voice, then the narrator says where you're up to
+    page.querySelector('.read-aloud').onclick = () => {
+      if (progress.chapter === 'treasure') return speakLine('n_wait');
+      if (friend) return speak(page.querySelector('.book-words').innerText.replace('🔊 Read to me', ''));
+      speakLine([`${kind}_want`, ...(progress.accepted[kind] || done ? [done ? 'n_quest_done' : hintLine(kind, progress)] : [])]);
+    };
   };
   for (const d of dragons) {
     const b = document.createElement('button');

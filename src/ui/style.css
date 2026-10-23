@@ -165,6 +165,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .options-item small { font-size: 14px; color: #4a5470; }
 .options-icon { font-size: 34px; }
 .options-item:hover { background: #fff3bf; }
+.options-credits { margin: 2px 0 0; font-size: 12px; color: #4a5470; line-height: 1.35; }
 
 /* ---------- music picker ---------- */
 .music-picker .options-panel { width: min(460px, 100%); max-height: calc(100% - 32px); overflow-y: auto; }

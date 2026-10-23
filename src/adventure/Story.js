@@ -6,7 +6,7 @@ import { placeQuestItems } from './questItems.js';
 import { QuestItemsView } from './QuestItemsView.js';
 import { openDragonBook } from '../ui/DragonBook.js';
 import { DRAGONS } from '../creatures/dragonModels.js';
-import { speak } from '../ui/speak.js';
+import { speak, speakLine } from '../ui/speak.js';
 import { load, save } from '../ui/storage.js';
 import { DIRS } from '../worldgen.js';
 
@@ -68,24 +68,24 @@ export class Story {
     if (this.p.chestOpen) game.hud.showBookButton(() => this.openBook());
   }
 
+  // Ollie stands in front of the player, level with the chest but on the other side of the
+  // path, so the opening view shows the chest on one side and Ollie on the other.
   olliesSpot() {
     const { chest } = this.g.hunt;
     const start = this.g.startTile();
-    const open = (x, z) => this.g.walkable(x, z) === true;
-    let best = null;
-    for (let dz = -2; dz <= 2; dz++)
-      for (let dx = -2; dx <= 2; dx++) {
-        const x = chest.x + dx, z = chest.z + dz;
-        if (!open(x, z) || (x === start.x && z === start.z)) continue;
-        const fromStart = Math.hypot(x - start.x, z - start.z), fromChest = Math.hypot(dx, dz);
-        if (fromChest < 1 || fromStart < 2) continue;
-        // close to the chest, a few steps from the player, not in the way straight ahead
-        const [fx, fz] = DIRS[start.facing];
-        const ahead = Math.abs((x - start.x) * fz - (z - start.z) * fx) < 0.5 && (x - start.x) * fx + (z - start.z) * fz > 0;
-        const score = fromChest + Math.abs(fromStart - 3.5) + (ahead ? 3 : 0);
-        if (!best || score < best.score) best = { x: x + 0.5, z: z + 0.5, score };
+    const [fx, fz] = DIRS[start.facing];
+    const [rx, rz] = DIRS[(start.facing + 1) % 4];
+    const sx = start.x + 0.5, sz = start.z + 0.5;
+    const ahead = (chest.x + 0.5 - sx) * fx + (chest.z + 0.5 - sz) * fz;
+    const chestSide = Math.sign((chest.x + 0.5 - sx) * rx + (chest.z + 0.5 - sz) * rz) || 1;
+    const open = (x, z) => this.g.walkable(Math.floor(x), Math.floor(z)) === true;
+    for (const a of [ahead, ahead + 1, ahead - 1, ahead + 2])
+      for (const w of [1.5, 2.5, 1.2, 3.5]) {
+        const x = sx + fx * a - rx * chestSide * w, z = sz + fz * a - rz * chestSide * w;
+        if (open(x, z) && Math.hypot(x - chest.x - 0.5, z - chest.z - 0.5) > 1.2) return { x, z };
       }
-    return best ?? { x: chest.x + 0.5, z: chest.z - 1.5 };
+    // no room on the other side: stand beside the chest
+    return { x: chest.x + 0.5 + rx * chestSide * 1.5, z: chest.z + 0.5 + rz * chestSide * 1.5 };
   }
 
   // A dragon sits at its resting spot, marked with a beam until it becomes your friend.
@@ -150,7 +150,7 @@ export class Story {
     if (this.p.chapter === 'done') {
       setTimeout(() => {
         this.g.hud.showBanner('You are a real Dragon Keeper! 🏆', true);
-        speak('You made friends with every dragon. You are a real Dragon Keeper!');
+        speakLine('n_keeper');
       }, 2500);
     }
   }
@@ -217,9 +217,8 @@ export class Story {
     save(this.key, JSON.stringify(this.p));
     this.refresh();
     const name = DRAGONS[d.kind].name;
-    const what = { ember: 'its egg back', glimmer: 'the sparkly gems', frost: 'the moon flower' }[d.kind];
     this.g.hud.showBanner(`${name} is so happy! 💛`, true);
-    speak(`You gave ${name} ${what}! ${name} is so happy. Stay close so it learns to trust you.`);
+    speakLine([`${d.kind}_thanks`, `n_trust_${d.kind}`]); // the dragon says thank you, then a hint
     d.dragon.setMode('rear');
     setTimeout(() => d.dragon.setMode('sit'), 1800);
     return true;

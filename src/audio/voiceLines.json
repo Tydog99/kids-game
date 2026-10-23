@@ -1,0 +1,162 @@
+{
+ "ollie_keys0": {
+  "voice": "ollie",
+  "text": "Oh no! I lost my 3 golden keys! Can you find them? Look for the golden lights in the sky!"
+ },
+ "ollie_keys1": {
+  "voice": "ollie",
+  "text": "You found one key! Keep looking. Follow the golden lights!"
+ },
+ "ollie_keys2": {
+  "voice": "ollie",
+  "text": "You found two keys! Keep looking. Follow the golden lights!"
+ },
+ "ollie_keys3": {
+  "voice": "ollie",
+  "text": "You found all my keys! Now touch the treasure chest to open it!"
+ },
+ "ollie_book": {
+  "voice": "ollie",
+  "text": "My old Dragon Book! Look up! The dragons are coming down to land!"
+ },
+ "ollie_landed": {
+  "voice": "ollie",
+  "text": "The dragons have landed! Walk up to a dragon and press E to look at it in your Dragon Book. Each one needs your help."
+ },
+ "ollie_follow": {
+  "voice": "ollie",
+  "text": "Follow the colored lights to find what the dragons need. You can do it!"
+ },
+ "ollie_done": {
+  "voice": "ollie",
+  "text": "You made friends with every dragon. You are a real Dragon Keeper!"
+ },
+ "n_whoa": {
+  "voice": "narrator",
+  "text": "Whoa! Was that a dragon? Look up!"
+ },
+ "n_egg": {
+  "voice": "narrator",
+  "text": "You found Ember's egg! Carry it back to Ember."
+ },
+ "n_gem1": {
+  "voice": "narrator",
+  "text": "Sparkly gem 1 of 5!"
+ },
+ "n_gem2": {
+  "voice": "narrator",
+  "text": "Sparkly gem 2 of 5!"
+ },
+ "n_gem3": {
+  "voice": "narrator",
+  "text": "Sparkly gem 3 of 5!"
+ },
+ "n_gem4": {
+  "voice": "narrator",
+  "text": "Sparkly gem 4 of 5!"
+ },
+ "n_gems": {
+  "voice": "narrator",
+  "text": "You found all 5 gems! Bring them to Glimmer."
+ },
+ "n_flower": {
+  "voice": "narrator",
+  "text": "You picked the moon flower! Bring it to Frost."
+ },
+ "n_asleep": {
+  "voice": "narrator",
+  "text": "The moon flower is still asleep. Come back at night!"
+ },
+ "n_full": {
+  "voice": "narrator",
+  "text": "Your hands are full! Deliver what you are carrying first."
+ },
+ "n_trust_ember": {
+  "voice": "narrator",
+  "text": "Ember is so happy! Stay close so it learns to trust you."
+ },
+ "n_trust_glimmer": {
+  "voice": "narrator",
+  "text": "Glimmer is so happy! Stay close so it learns to trust you."
+ },
+ "n_trust_frost": {
+  "voice": "narrator",
+  "text": "Frost is so happy! Stay close so it learns to trust you."
+ },
+ "n_keeper": {
+  "voice": "narrator",
+  "text": "Hooray! You are a real Dragon Keeper!"
+ },
+ "n_wait": {
+  "voice": "narrator",
+  "text": "Help Grandpa Ollie find his keys first. Then the dragons will come down."
+ },
+ "n_hint_ember": {
+  "voice": "narrator",
+  "text": "Follow the orange light."
+ },
+ "n_hint_frost": {
+  "voice": "narrator",
+  "text": "Follow the blue light. The flower only opens at night."
+ },
+ "n_hint_glimmer0": {
+  "voice": "narrator",
+  "text": "Gems found: 0 of 5. Follow the green lights."
+ },
+ "n_hint_glimmer1": {
+  "voice": "narrator",
+  "text": "Gems found: 1 of 5. Follow the green lights."
+ },
+ "n_hint_glimmer2": {
+  "voice": "narrator",
+  "text": "Gems found: 2 of 5. Follow the green lights."
+ },
+ "n_hint_glimmer3": {
+  "voice": "narrator",
+  "text": "Gems found: 3 of 5. Follow the green lights."
+ },
+ "n_hint_glimmer4": {
+  "voice": "narrator",
+  "text": "Gems found: 4 of 5. Follow the green lights."
+ },
+ "n_has_egg": {
+  "voice": "narrator",
+  "text": "You have the egg! Walk up to Ember to give it back."
+ },
+ "n_has_flower": {
+  "voice": "narrator",
+  "text": "You have the flower! Walk up to Frost to give it."
+ },
+ "n_has_gems": {
+  "voice": "narrator",
+  "text": "You have all 5 gems! Walk up to Glimmer."
+ },
+ "n_quest_done": {
+  "voice": "narrator",
+  "text": "Done! Now stay close so it can trust you."
+ },
+ "ember_want": {
+  "voice": "ember",
+  "text": "I lost my egg! Can you find it in the forest?"
+ },
+ "ember_thanks": {
+  "voice": "ember",
+  "text": "My egg! You found my egg! Thank you!"
+ },
+ "glimmer_want": {
+  "voice": "glimmer",
+  "text": "I love shiny things! Can you bring me 5 sparkly gems?"
+ },
+ "glimmer_thanks": {
+  "voice": "glimmer",
+  "text": "Ooh, so sparkly! Thank you, thank you!"
+ },
+ "frost_want": {
+  "voice": "frost",
+  "text": "Please bring me a moon flower. It only blooms at night, by a lake."
+ },
+ "frost_thanks": {
+  "voice": "frost",
+  "text": "A moon flower. It is so beautiful. Thank you, friend."
+ }
+}
