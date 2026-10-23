@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { generateWorld, isWalkable, tileAt, TREE_KIND, TOWN_HALF, DIRS } from './worldgen.js';
 import { T } from './tiles.js';
 import { WorldRenderer } from './world/WorldRenderer.js';
+import { Environment } from './world/environment.js';
+import { EnvironmentView } from './world/EnvironmentView.js';
 import { Player } from './player/Player.js';
 import { Input } from './player/input.js';
 import { FollowCamera } from './camera/FollowCamera.js';
@@ -23,6 +25,7 @@ import { METEOR_RATES, DEFAULT_METEOR_INDEX } from './world/shootingStars.js';
 import { load, save } from './ui/storage.js';
 
 const OAK_TRUNK_RADIUS = 0.16;
+const ENV_TOP = { tree: 3.6, building: 6.8 }; // breath below this height hits the thing on that tile
 const MOUNT_REACH = 1.3; // how close (to the dragon's body) the player must be to climb on
 const TRUST_SHOW = 7; // show trust hearts when this close to an untrusted dragon
 const WALK_HINT = '⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around';
@@ -54,6 +57,9 @@ export class Game {
 
     this.worldView = new WorldRenderer(this.world);
     this.scene.add(this.worldView.group);
+    // trees and buildings that dragon breath can burn, freeze or turn to diamond
+    this.envView = new EnvironmentView(this.scene, this.worldView);
+    this.env = new Environment(this.world, (obj, how) => this.envView.show(obj, how));
 
     this.player = new Player(this.startTile(), characterId, (x, z) => this.walkable(x, z));
     this.scene.add(this.player.object);
@@ -193,6 +199,50 @@ export class Game {
 
   townAt(x, z) {
     return this.towns.find((t) => Math.abs(x - t.cx + 0.5) <= TOWN_HALF && Math.abs(z - t.cz + 0.5) <= TOWN_HALF);
+  }
+
+  // ---- dragon breath vs. trees and buildings ----
+
+  applyChange(change) {
+    if (change && change.to !== 'gone') this.envView.show(change.obj);
+  }
+
+  // Breath from the dragon you're riding hits whatever tree or building it reaches.
+  breathHits() {
+    const d = this.riding?.dragon;
+    if (!d?.breath) return;
+    const kind = d.spec.breath;
+    for (const P of d.breath.particles) {
+      if (P.used) continue;
+      const obj = this.env.at(Math.floor(P.p.x), Math.floor(P.p.z));
+      if (!obj || P.p.y > ENV_TOP[obj.type]) continue;
+      // breath that can't change this thing (fire on fire, diamonds on diamond) carries on past it
+      const change = this.env.hit(obj, kind);
+      if (!change) continue;
+      P.used = true;
+      this.applyChange(change);
+    }
+  }
+
+  // Bumping into something frozen shatters it (on foot, or on a dragon close to the ground).
+  touchIce() {
+    let x, z, r;
+    if (this.riding) {
+      if (this.riding.y > 2.5) return;
+      ({ x, z } = this.riding);
+      r = 0.95;
+    } else {
+      ({ px: x, pz: z } = this.player.motor);
+      r = PLAYER_RADIUS + 0.15;
+    }
+    for (let tz = Math.floor(z - r); tz <= Math.floor(z + r); tz++)
+      for (let tx = Math.floor(x - r); tx <= Math.floor(x + r); tx++) {
+        const obj = this.env.at(tx, tz);
+        if (obj?.state !== 'frozen') continue;
+        // distance from (x, z) to this tile's square
+        const dx = Math.max(tx - x, 0, x - (tx + 1)), dz = Math.max(tz - z, 0, z - (tz + 1));
+        if (Math.hypot(dx, dz) <= r) this.env.touch(obj);
+      }
   }
 
   // ---- dragons: trust, calling, riding ----
@@ -383,6 +433,10 @@ export class Game {
     this.worldView.setPlayerView(this.playerView);
     this.worldView.update(t);
     this.dragons.update(dt, this.riding ? null : this.playerInfo());
+    this.breathHits();
+    this.touchIce();
+    for (const c of this.env.update(dt)) this.applyChange(c);
+    this.envView.update(dt, this.env.burning);
     this.updateTrust(dt);
     this.refreshMyDragons();
     if (this.riding) {
@@ -452,6 +506,7 @@ export class Game {
     this.dayCycle.dispose();
     this.hud.dispose();
     this.worldView.dispose();
+    this.envView.dispose();
     this.player.character.dispose();
   }
 }

@@ -380,7 +380,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   position: absolute;
   right: 214px;
   bottom: 20px;
-  display: flex;
   flex-direction: column;
   gap: 6px;
 }

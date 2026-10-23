@@ -136,6 +136,8 @@ export class WorldRenderer {
     this.waterMat = makeLiquidMaterial({});
     this.lavaMat = makeLiquidMaterial({ emissive: new THREE.Color('#ff4a00'), emissiveIntensity: 0.6 });
     this.rng = createRng(world.seed + ':render');
+    this.treeInstances = new Map(); // tile index → { mesh, index } for each tree
+    this.buildingMeshes = []; // one per world.buildings entry
     this.buildGround();
     this.buildTrees();
     this.buildBuildings();
@@ -258,6 +260,7 @@ export class WorldRenderer {
         sc.set(s, s * (0.95 + ((r >> 2) % 3) * 0.06), s);
         p.set(o.x + 0.5, this.heightAt(o.x, o.z), o.z + 0.5);
         mesh.setMatrixAt(i, m.compose(p, q, sc));
+        this.treeInstances.set(o.z * w.width + o.x, { mesh, index: i });
       });
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -278,6 +281,7 @@ export class WorldRenderer {
       holder.rotation.y = b.doorDir === 0 ? Math.PI : 0;
       holder.add(mesh);
       this.group.add(holder);
+      this.buildingMeshes.push(mesh);
     }
   }
 
