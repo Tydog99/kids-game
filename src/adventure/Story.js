@@ -321,7 +321,8 @@ export class Story {
 
   // Grown-up shortcut.
   skip() {
-    const before = this.p.chapter, hadBook = this.p.hasBook;
+    if (this.p.chapter === 'treasure') return this.skipToTreasure();
+    const hadBook = this.p.hasBook;
     this.set({ type: 'skip' });
     if (!hadBook) {
       this.unboxing = null;
@@ -329,13 +330,28 @@ export class Story {
       this.g.hud.showBookButton(() => this.openBook());
       this.landingAt = 0.1;
     }
-    if (before === 'treasure') {
-      const { hunt, treasureView } = this.g;
-      hunt.keys.forEach((k) => (k.collected = true));
-      hunt.chest.open = true;
-      treasureView.restore();
-    }
     this.g.hud.showBanner(!hadBook ? 'Skipped to: the dragons land' : 'Skipped: one dragon quest done', true);
+  }
+
+  // Skipping the key hunt still plays Ollie's reward: all the keys are found, the player is put
+  // back in front of the chest, and it opens just as if they'd walked up to it.
+  skipToTreasure() {
+    const { hunt, treasureView, player } = this.g;
+    hunt.keys.forEach((k, i) => {
+      k.collected = true;
+      this.set({ type: 'key', index: i });
+    });
+    treasureView.restore();
+    if (!this.g.riding) {
+      const st = this.g.startTile(), m = player.motor, c = hunt.chest;
+      m.px = st.x + 0.5;
+      m.pz = st.z + 0.5;
+      m.yaw = Math.atan2(c.x + 0.5 - m.px, c.z + 0.5 - m.pz);
+    }
+    hunt.chest.open = true;
+    treasureView.open();
+    this.g.hud.showBanner('You opened the treasure!', true);
+    this.onHuntEvent({ type: 'open' });
   }
 
   reset() {
