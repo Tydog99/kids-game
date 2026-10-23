@@ -103,26 +103,6 @@
   "voice": "narrator",
   "text": "Follow the blue light. The flower only opens at night."
  },
- "n_hint_glimmer0": {
-  "voice": "narrator",
-  "text": "Gems found: 0 of 5. Follow the green lights."
- },
- "n_hint_glimmer1": {
-  "voice": "narrator",
-  "text": "Gems found: 1 of 5. Follow the green lights."
- },
- "n_hint_glimmer2": {
-  "voice": "narrator",
-  "text": "Gems found: 2 of 5. Follow the green lights."
- },
- "n_hint_glimmer3": {
-  "voice": "narrator",
-  "text": "Gems found: 3 of 5. Follow the green lights."
- },
- "n_hint_glimmer4": {
-  "voice": "narrator",
-  "text": "Gems found: 4 of 5. Follow the green lights."
- },
  "n_has_egg": {
   "voice": "narrator",
   "text": "You have the egg! Walk up to Ember to give it back."

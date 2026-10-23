@@ -75,7 +75,7 @@ function hint(kind, p) {
 function hintLine(kind, p) {
   if (kind === 'ember') return p.carrying === 'egg' ? 'n_has_egg' : 'n_hint_ember';
   if (kind === 'frost') return p.carrying === 'flower' ? 'n_has_flower' : 'n_hint_frost';
-  return p.gems.length >= 5 ? 'n_has_gems' : `n_hint_glimmer${p.gems.length}`;
+  return p.gems.length >= 5 ? 'n_has_gems' : null; // the gem count is shown, not read out
 }
 
 // dragons: [{ kind, name, status }]; progress: adventure progress. start: kind to open at.
@@ -123,7 +123,7 @@ export function openDragonBook({ dragons, progress, start, onClose = () => {} })
     page.querySelector('.read-aloud').onclick = () => {
       if (progress.chapter === 'treasure') return speakLine('n_wait');
       if (friend) return speak(page.querySelector('.book-words').innerText.replace('🔊 Read to me', ''));
-      speakLine([`${kind}_want`, ...(progress.accepted[kind] || done ? [done ? 'n_quest_done' : hintLine(kind, progress)] : [])]);
+      speakLine([`${kind}_want`, ...(progress.accepted[kind] || done ? [done ? 'n_quest_done' : hintLine(kind, progress)].filter(Boolean) : [])]);
     };
   };
   for (const d of dragons) {
