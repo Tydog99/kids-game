@@ -227,9 +227,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .hint.fade { opacity: 0; }
 .banner {
   position: absolute;
-  top: 70px;
+  top: 122px;
   left: 50%;
-  transform: translate(-50%, -140px);
+  transform: translate(-50%, -240px);
   padding: 10px 28px;
   border: 4px solid var(--ink);
   border-radius: 12px;
@@ -245,9 +245,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 }
 .banner.show { animation: banner 3s ease forwards; }
 @keyframes banner {
-  0% { transform: translate(-50%, -140px); }
+  0% { transform: translate(-50%, -240px); }
   12%, 80% { transform: translate(-50%, 0); }
-  100% { transform: translate(-50%, -140px); }
+  100% { transform: translate(-50%, -240px); }
 }
 
 .daypanel {
@@ -359,6 +359,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .book-status { margin: 0; font-size: 15px; color: #4a5470; }
 .book-need { margin: 0; font-size: 18px; line-height: 1.35; }
 .book-need.done b { color: #2f7d4a; }
+.book-hint { display: inline-block; margin-top: 6px; font-size: 16px; color: #4a5470; }
 .need-icon { font-size: 26px; vertical-align: middle; }
 .read-aloud { align-self: start; padding: 4px 12px; font-weight: 700; }
 .dragon-book .options-panel { width: min(640px, 100%); }

@@ -2,6 +2,8 @@
 // the dragons landing, the Dragon Book, and saving progress for this world.
 import { loadProgress, apply, nextGoal, ollieSays, canBefriend } from './adventure.js';
 import { Villager } from './Villager.js';
+import { placeQuestItems } from './questItems.js';
+import { QuestItemsView } from './QuestItemsView.js';
 import { openDragonBook } from '../ui/DragonBook.js';
 import { DRAGONS } from '../creatures/dragonModels.js';
 import { speak } from '../ui/speak.js';
@@ -12,6 +14,9 @@ const GROUND = 0.25;
 const TALK_RANGE = 4.5; // Ollie's speech shows when the player is this close
 const LOOK_RANGE = 2.2; // how close to a dragon's body to look at it with E
 const BEAM = { ember: '#ff8a4a', glimmer: '#7af0c8', frost: '#9fdcff' };
+const COLOR_WORD = { ember: 'orange', glimmer: 'green', frost: 'blue' };
+const PICK_RANGE = 0.85; // how close to an item to pick it up
+const GIVE_RANGE = 2.8; // how close to a dragon's body to hand it something
 
 export class Story {
   constructor(game) {
@@ -43,6 +48,18 @@ export class Story {
         d.y = GROUND + 7 + d.index * 1.5;
       } else if (!d.trusted) this.rest(d);
     }
+    // the dragons' quest items, placed away from the chest, Ollie and the dragons' resting spots
+    const c = hunt.chest;
+    this.items = placeQuestItems(game.world, game.startTile(), [
+      { x: c.x, z: c.z, solid: true },
+      { x: Math.floor(spot.x), z: Math.floor(spot.z) },
+      ...ds.list.map((d) => ({ x: Math.floor(d.restSpot.x), z: Math.floor(d.restSpot.z) })),
+    ]);
+    this.itemsView = new QuestItemsView(game.scene, this.items);
+    this.itemMarkers = new Map(); // 'egg' | 'flower' | 'gem3' → beam
+    this.nagUntil = 0;
+    this.time = 0;
+
     this.landingAt = null;
     this.speechShown = null;
     this.intro = 6; // seconds Ollie's first words stay up wherever the player is
@@ -151,6 +168,17 @@ export class Story {
     return Math.hypot(x - this.ollie.x, z - this.ollie.z) < 2.2;
   }
 
+  // Looking at a dragon with E: its page in the Dragon Book, and its quest starts.
+  examine(d) {
+    if (!this.p.accepted[d.kind]) {
+      this.set({ type: 'accept', kind: d.kind });
+      setTimeout(() => this.g.hud.showBanner(`Follow the ${COLOR_WORD[d.kind]} lights!`, true), 400);
+    }
+    // giving it what it needs, if you have it
+    this.tryDeliver(d);
+    this.openBook(d.kind);
+  }
+
   openBook(kind) {
     const status = (d) => {
       if (d.trusted) return 'Your friend 💛';
@@ -179,6 +207,95 @@ export class Story {
     speak(text);
   }
 
+  // ---- the dragon quests ----
+
+  tryDeliver(d) {
+    if (this.p.quests[d.kind]) return false;
+    const next = apply(this.p, { type: 'deliver', kind: d.kind });
+    if (!next.quests[d.kind]) return false;
+    this.p = next;
+    save(this.key, JSON.stringify(this.p));
+    this.refresh();
+    const name = DRAGONS[d.kind].name;
+    const what = { ember: 'its egg back', glimmer: 'the sparkly gems', frost: 'the moon flower' }[d.kind];
+    this.g.hud.showBanner(`${name} is so happy! 💛`, true);
+    speak(`You gave ${name} ${what}! ${name} is so happy. Stay close so it learns to trust you.`);
+    d.dragon.setMode('rear');
+    setTimeout(() => d.dragon.setMode('sit'), 1800);
+    return true;
+  }
+
+  nag(text) {
+    const now = performance.now();
+    if (now < this.nagUntil) return;
+    this.nagUntil = now + 5000;
+    this.g.hud.showBanner(text, true);
+    speak(text);
+  }
+
+  updateQuests(player) {
+    const p = this.p;
+    if (p.chapter !== 'dragons') return this.itemsView.update(0, this.time, {}, 0, this.g.player.character.root);
+    const night = this.g.dayCycle.state?.stars ?? 0;
+    const at = (o) => Math.hypot(player.x - o.x - 0.5, player.z - o.z - 0.5);
+
+    if (p.accepted.ember && !p.egg && at(this.items.egg) < PICK_RANGE) {
+      if (p.carrying) this.nag('Your hands are full! Deliver what you are carrying first.');
+      else {
+        this.set({ type: 'pickUp', item: 'egg' });
+        this.g.hud.showBanner("You found Ember's egg! 🥚", true);
+        speak("You found Ember's egg! Carry it back to Ember.");
+      }
+    }
+    if (p.accepted.glimmer && !p.quests.glimmer) {
+      this.items.gems.forEach((g, i) => {
+        if (this.p.gems.includes(i) || at(g) >= PICK_RANGE) return;
+        this.set({ type: 'gem', index: i });
+        const n = this.p.gems.length;
+        this.g.hud.showBanner(n < 5 ? `Sparkly gem ${n} of 5! 💎` : 'All 5 gems! Bring them to Glimmer 💎', true);
+        speak(n < 5 ? `Sparkly gem ${n} of 5!` : 'You found all 5 gems! Bring them to Glimmer.');
+      });
+    }
+    if (p.accepted.frost && !p.flower && at(this.items.flower) < PICK_RANGE + 0.2) {
+      if (night < 0.5) this.nag('The moon flower is still asleep. Come back at night! 🌙');
+      else if (p.carrying) this.nag('Your hands are full! Deliver what you are carrying first.');
+      else {
+        this.set({ type: 'pickUp', item: 'flower' });
+        this.g.hud.showBanner('You picked the moon flower! 🌸', true);
+        speak('You picked the moon flower! Bring it to Frost.');
+      }
+    }
+    // walking up to a dragon with what it needs hands it over
+    for (const d of this.g.dragons.list) if (!d.trusted && d.grounded && d.distanceTo(player.x, player.z) < GIVE_RANGE) this.tryDeliver(d);
+
+    this.syncItemMarkers();
+    const q = this.p;
+    this.itemsView.update(0, this.time, {
+      egg: q.egg,
+      flower: q.flower,
+      gems: q.gems,
+      carrying: q.carrying,
+      showEgg: !!q.accepted.ember,
+      showGems: !!q.accepted.glimmer && !q.quests.glimmer,
+      showFlower: !!q.accepted.frost,
+    }, night, this.g.player.character.root);
+    this.g.player.character.carrying = !!q.carrying;
+  }
+
+  // A beam of light over each item still to find, in its dragon's color.
+  syncItemMarkers() {
+    const p = this.p, want = new Map();
+    if (p.accepted.ember && !p.egg) want.set('egg', [this.items.egg, BEAM.ember]);
+    if (p.accepted.frost && !p.flower) want.set('flower', [this.items.flower, BEAM.frost]);
+    if (p.accepted.glimmer && !p.quests.glimmer) this.items.gems.forEach((g, i) => !p.gems.includes(i) && want.set(`gem${i}`, [g, BEAM.glimmer]));
+    for (const [k, beam] of this.itemMarkers) {
+      if (want.has(k)) continue;
+      this.g.treasureView.removeMarker(beam);
+      this.itemMarkers.delete(k);
+    }
+    for (const [k, [pos, color]] of want) if (!this.itemMarkers.has(k)) this.itemMarkers.set(k, this.g.treasureView.addMarker(pos.x, pos.z, color));
+  }
+
   // Grown-up shortcut.
   skip() {
     const before = this.p.chapter;
@@ -201,7 +318,9 @@ export class Story {
   }
 
   update(dt, t) {
+    this.time = t;
     const player = this.g.playerInfo();
+    this.updateQuests(player);
     // Ollie talks when you're near him (and at the very start)
     this.intro -= dt;
     const near = Math.hypot(player.x - this.ollie.x, player.z - this.ollie.z) < TALK_RANGE;
@@ -244,6 +363,7 @@ export class Story {
   }
 
   dispose() {
+    this.itemsView.dispose();
     this.ollie.dispose();
   }
 }

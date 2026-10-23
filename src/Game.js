@@ -453,7 +453,7 @@ export class Game {
       if (interact) {
         const d = this.nearestRideable();
         if (d) this.mount(d);
-        else if (this.story?.examinable()) this.story.openBook(this.story.examinable().kind);
+        else if (this.story?.examinable()) this.story.examine(this.story.examinable());
         else if (this.story?.nearOllie()) this.story.talk();
       }
       if (!this.riding) {

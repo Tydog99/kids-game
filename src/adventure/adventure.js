@@ -22,6 +22,11 @@ export function newProgress() {
     chestOpen: false,
     sawDragon: false, // the "was that a dragon?!" moment happened
     landed: false, // the dragons have come down
+    accepted: {}, // kind → true once you've looked at that dragon in the Dragon Book
+    carrying: null, // 'egg' or 'flower' while carried
+    egg: false, // picked up (and maybe delivered)
+    flower: false,
+    gems: [], // indexes of the gems found
     quests: {}, // kind → true once that dragon's quest is done
     friends: {}, // kind → name, once befriended
   };
@@ -38,6 +43,9 @@ export function loadProgress(json) {
       ...p,
       chapter: CHAPTERS.includes(p.chapter) ? p.chapter : base.chapter,
       keys: Array.isArray(p.keys) ? p.keys.filter((k) => Number.isInteger(k) && k >= 0 && k < 3) : [],
+      accepted: { ...(p.accepted ?? {}) },
+      carrying: ['egg', 'flower'].includes(p.carrying) ? p.carrying : null,
+      gems: Array.isArray(p.gems) ? p.gems.filter((g) => Number.isInteger(g) && g >= 0 && g < 5) : [],
       quests: { ...(p.quests ?? {}) },
       friends: { ...(p.friends ?? {}) },
     };
@@ -53,9 +61,27 @@ export function nextGoal(p) {
     return { icon: '🧰', text: 'Open the treasure chest' };
   }
   const friends = Object.keys(p.friends).length;
-  if (p.chapter === 'dragons') return { icon: '🐉', text: `Make friends with the dragons (${friends}/3)` };
+  if (p.chapter === 'dragons') {
+    if (p.carrying === 'egg') return { icon: '🥚', text: 'Bring the egg back to Ember' };
+    if (p.carrying === 'flower') return { icon: '🌸', text: 'Bring the moon flower to Frost' };
+    if (p.accepted.glimmer && !p.quests.glimmer) {
+      if (p.gems.length >= 5) return { icon: '💎', text: 'Bring the 5 gems to Glimmer' };
+      if (p.gems.length > 0) return { icon: '💎', text: `Find sparkly gems (${p.gems.length}/5)` };
+    }
+    // a dragon that's been helped and now just needs you close by
+    const ready = KINDS.find((k) => p.quests[k] && !p.friends[k]);
+    if (ready) return { icon: '💛', text: `Stay close to ${NAMES[ready]} so it trusts you` };
+    if (p.accepted.ember && !p.egg) return { icon: '🥚', text: "Find Ember's egg in the forest" };
+    if (p.accepted.glimmer && !p.quests.glimmer) return { icon: '💎', text: 'Find sparkly gems (0/5)' };
+    if (p.accepted.frost && !p.flower) return { icon: '🌸', text: 'Find the moon flower by a lake, at night' };
+    return { icon: '🐉', text: `Make friends with the dragons (${friends}/3)` };
+  }
   return { icon: '🏆', text: 'You are a Dragon Keeper!' };
 }
+
+const KINDS = ['ember', 'glimmer', 'frost'];
+const NAMES = { ember: 'Ember', glimmer: 'Glimmer', frost: 'Frost' };
+const ITEM_OWNER = { egg: 'ember', flower: 'frost' };
 
 // What Grandpa Ollie says right now.
 export function ollieSays(p) {
@@ -67,7 +93,8 @@ export function ollieSays(p) {
   }
   if (p.chapter === 'dragons' && !p.landed) return 'My old Dragon Book! Look up! The dragons are coming down to land!';
   if (p.chapter === 'dragons') {
-    return 'The dragons have landed! Walk up to a dragon and press E to look at it in your Dragon Book. Each one needs your help.';
+    if (!KINDS.some((k) => p.accepted[k])) return 'The dragons have landed! Walk up to a dragon and press E to look at it in your Dragon Book. Each one needs your help.';
+    return 'Follow the colored lights to find what the dragons need. You can do it!';
   }
   return 'You made friends with every dragon. You are a real Dragon Keeper!';
 }
@@ -91,6 +118,28 @@ export function apply(p, event) {
     case 'landed':
       q.landed = true;
       break;
+    case 'accept':
+      if (q.chapter === 'dragons') q.accepted[event.kind] = true;
+      break;
+    case 'pickUp': // the egg or the moon flower; you can carry one thing at a time
+      if (!q.carrying && !q[event.item]) {
+        q[event.item] = true;
+        q.carrying = event.item;
+      }
+      break;
+    case 'gem':
+      if (!q.gems.includes(event.index)) q.gems.push(event.index);
+      break;
+    case 'deliver': {
+      // bring what a dragon needs: kind is the dragon you're next to
+      const k = event.kind;
+      if (q.quests[k]) break;
+      if (q.carrying && ITEM_OWNER[q.carrying] === k) {
+        q.carrying = null;
+        q.quests[k] = true;
+      } else if (k === 'glimmer' && q.gems.length >= 5) q.quests[k] = true;
+      break;
+    }
     case 'questDone':
       q.quests[event.kind] = true;
       break;
@@ -105,8 +154,12 @@ export function apply(p, event) {
         q.sawDragon = true;
         q.chapter = 'dragons';
       } else if (q.chapter === 'dragons') {
-        const kind = ['ember', 'glimmer', 'frost'].find((k) => !q.quests[k]);
-        if (kind) q.quests[kind] = true;
+        const kind = KINDS.find((k) => !q.quests[k]);
+        if (kind) {
+          q.quests[kind] = true;
+          q.accepted[kind] = true;
+          if (q.carrying && ITEM_OWNER[q.carrying] === kind) q.carrying = null;
+        }
       }
       break;
   }

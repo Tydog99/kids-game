@@ -37,6 +37,18 @@ function picture(kind) {
   return pictures[kind];
 }
 
+const LIGHT = { ember: 'orange', glimmer: 'green', frost: 'blue' };
+
+// Where the player is up to on a dragon's quest.
+function hint(kind, p) {
+  if (kind === 'ember' && p.carrying === 'egg') return '🥚 You have the egg! Walk up to Ember to give it back.';
+  if (kind === 'frost' && p.carrying === 'flower') return '🌸 You have the flower! Walk up to Frost to give it.';
+  if (kind === 'glimmer' && p.gems.length >= 5) return '💎 You have all 5 gems! Walk up to Glimmer.';
+  if (kind === 'glimmer') return `💎 Gems found: ${p.gems.length} of 5. Follow the ${LIGHT[kind]} lights.`;
+  if (kind === 'frost') return `Follow the ${LIGHT[kind]} light. The flower only opens at night 🌙`;
+  return `Follow the ${LIGHT[kind]} light.`;
+}
+
 // dragons: [{ kind, name, status }]; progress: adventure progress. start: kind to open at.
 export function openDragonBook({ dragons, progress, start, onClose = () => {} }) {
   const el = document.createElement('div');
@@ -74,7 +86,7 @@ export function openDragonBook({ dragons, progress, start, onClose = () => {} })
             ? `<p class="book-need">Help Grandpa Ollie find his keys first. Then the dragons will come down.</p>`
             : friend
               ? `<p class="book-need done">💛 ${friend} is your friend! Press E next to ${friend} to ride.</p>`
-              : `<p class="book-need ${done ? 'done' : ''}"><span class="need-icon">${need.icon}</span> “${need.want}”${done ? '<br /><b>✓ Done! Now stay close so it can trust you.</b>' : ''}</p>`
+              : `<p class="book-need ${done ? 'done' : ''}"><span class="need-icon">${need.icon}</span> “${need.want}”${done ? '<br /><b>✓ Done! Now stay close so it can trust you.</b>' : progress.accepted[kind] ? `<br /><span class="book-hint">${hint(kind, progress)}</span>` : ''}</p>`
         }
         <button class="read-aloud" type="button">🔊 Read to me</button>
       </div>`;
