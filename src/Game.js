@@ -23,6 +23,7 @@ import { MAX_DRAGONS } from './creatures/dragonSpawns.js';
 import { DAY_LENGTHS, DEFAULT_DAY_INDEX } from './world/skyState.js';
 import { METEOR_RATES, DEFAULT_METEOR_INDEX } from './world/shootingStars.js';
 import { load, save } from './ui/storage.js';
+import { music } from './audio/Music.js';
 
 const OAK_TRUNK_RADIUS = 0.16;
 const ENV_TOP = { tree: 3.6, building: 6.8 }; // breath below this height hits the thing on that tile
@@ -91,6 +92,12 @@ export class Game {
         save('daySpeed', String(i));
       },
       dragonCount,
+      musicVolume: music.volume,
+      onMusicVolume: (n) => {
+        music.setVolume(n);
+        music.unlock();
+        save('music', String(n));
+      },
       onDragonCount: (n) => {
         this.dragons.setCount(n);
         save('dragons', String(n));
@@ -448,6 +455,7 @@ export class Game {
     const moving = this.riding ? this.riding.motor.speed !== 0 : this.player.motor.speed !== 0;
     this.follow.update(dt, p, yaw, moving);
     this.dayCycle.update(dt, p, this.camera);
+    music.setNight(this.dayCycle.state.stars > 0.5); // softer music once the stars are out
     this.camera.updateMatrixWorld();
     this.playerView.set(p.x, p.y + 0.7, p.z).applyMatrix4(this.camera.matrixWorldInverse);
     this.worldView.setPlayerView(this.playerView);

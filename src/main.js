@@ -4,6 +4,8 @@ import { TitleScreen } from './ui/TitleScreen.js';
 import { Game } from './Game.js';
 import { DragonViewer } from './creatures/DragonViewer.js';
 import { openOptionsMenu } from './ui/OptionsMenu.js';
+import { music } from './audio/Music.js';
+import { load } from './ui/storage.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -14,6 +16,13 @@ document.getElementById('app').appendChild(renderer.domElement);
 
 const loading = document.getElementById('loading');
 let mode;
+
+// Music starts on the first click or key press (browsers don't allow sound before that).
+const savedVolume = Number(load('music', '6'));
+music.setVolume(Number.isInteger(savedVolume) && savedVolume >= 0 && savedVolume <= 10 ? savedVolume : 6);
+const unlockMusic = () => music.unlock();
+addEventListener('pointerdown', unlockMusic);
+addEventListener('keydown', unlockMusic);
 
 // Keep the current world in the URL hash so a reload returns to it.
 function setUrlSeed(seed) {

@@ -4,7 +4,7 @@ import { MAX_DRAGONS } from '../creatures/dragonSpawns.js';
 
 // In-game overlay: seed/share, new world, controls hint, town banner, touch d-pad.
 export class Hud {
-  constructor({ seed, onExit, onOptions, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate, dragonCount, onDragonCount }) {
+  constructor({ seed, onExit, onOptions, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate, dragonCount, onDragonCount, musicVolume, onMusicVolume }) {
     this.onDebugChange = null;
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
@@ -28,6 +28,10 @@ export class Hud {
         <div class="setting">
           <div class="setting-head"><label for="dragons">🐉 Dragons</label><output for="dragons"></output></div>
           <input id="dragons" type="range" min="0" max="${MAX_DRAGONS}" step="1" />
+        </div>
+        <div class="setting">
+          <div class="setting-head"><label for="music">🎵 Music</label><output for="music"></output></div>
+          <input id="music" type="range" min="0" max="10" step="1" />
         </div>
         <label class="debug" hidden><input id="debug-open" type="checkbox" /> 🛠️ Debug: open without keys</label>
       </div>
@@ -62,6 +66,7 @@ export class Hud {
     this.slider('#dayspeed', dayIndex, (i) => formatDayLength(DAY_LENGTHS[i]), onDaySpeed);
     this.slider('#meteors', meteorIndex, (i) => METEOR_RATES[i].label, onMeteorRate);
     this.slider('#dragons', dragonCount, (n) => (n === 0 ? 'None' : String(n)), onDragonCount);
+    this.slider('#music', musicVolume, (n) => (n === 0 ? 'Off' : String(n)), onMusicVolume);
 
     this.hint = this.el.querySelector('.hint');
     this.banner = this.el.querySelector('.banner');
