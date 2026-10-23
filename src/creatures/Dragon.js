@@ -47,6 +47,11 @@ export class Dragon {
     this.walkPhase = Math.random() * 6;
     this.flapPhase = 0;
     this.time = 0;
+    // controls for dragons moved by the game rather than posed in place:
+    this.stride = 1; // 0..1 how much the legs walk (0 = standing still in the walk pose)
+    this.manualAltitude = false; // true: the root's height is the real altitude, poses add no lift
+    this.extraPitch = 0; // nose up (negative) / down (positive) while climbing or diving
+    this.bank = 0; // lean into turns
 
     // root sits on the ground under the hips; everything else hangs off it
     this.root = new THREE.Group();
@@ -154,6 +159,12 @@ export class Dragon {
     this.breath?.dispose();
   }
 
+  // Where a rider sits, in the hips' local space: on top of the back, just behind the wings.
+  get seat() {
+    const { center, radii } = this.spec.torso;
+    return new THREE.Vector3(0, (center[1] + radii[1]) * V, (center[2] + radii[2] * 0.15) * V);
+  }
+
   breathe(seconds = 2) {
     this.breathTime = Math.max(this.breathTime, seconds);
   }
@@ -170,20 +181,23 @@ export class Dragon {
     const p = this.pose;
     const t = this.time;
 
-    this.walkPhase += dt * 5 * Math.max(0.15, p.gait);
+    const gait = p.gait * this.stride;
+    this.walkPhase += dt * 5 * Math.max(0.15, gait);
     this.flapPhase += dt * (4 + 3 * p.flap);
     const w = this.walkPhase, f = this.flapPhase;
 
     // whole body: hover and bob when flying, small step bob when walking
     // crouch lowers the hips by part of the back leg's length (used when sitting)
     const crouch = p.crouch * this.spec.backLeg.len * V * 0.45;
-    this.body.position.y = p.lift - crouch + Math.sin(f + Math.PI) * 0.12 * p.flap + Math.abs(Math.sin(w)) * 0.03 * p.gait;
-    this.hips.rotation.x = p.pitch + Math.sin(f) * 0.05 * p.flap + Math.sin(t * 2) * 0.02 * p.paw;
-    this.hips.rotation.z = Math.sin(w) * 0.03 * p.gait;
+    const lift = this.manualAltitude ? 0 : p.lift;
+    this.body.position.y = lift - crouch + Math.sin(f + Math.PI) * 0.12 * p.flap + Math.abs(Math.sin(w)) * 0.03 * gait;
+    this.body.rotation.z = this.bank;
+    this.hips.rotation.x = p.pitch + this.extraPitch + Math.sin(f) * 0.05 * p.flap + Math.sin(t * 2) * 0.02 * p.paw;
+    this.hips.rotation.z = Math.sin(w) * 0.03 * gait;
 
     // neck curves up, head stays fairly level
     this.neck.forEach((j, i) => {
-      j.rotation.x = (i === 0 ? p.neck : p.neckBend) + Math.sin(w * 2 + i) * 0.02 * p.gait;
+      j.rotation.x = (i === 0 ? p.neck : p.neckBend) + Math.sin(w * 2 + i) * 0.02 * gait;
       j.rotation.y = Math.sin(t * 0.7 + i) * 0.05;
     });
     // breathing: jaw drops open, head pushes forward and aims a little down, with a shudder
@@ -202,7 +216,7 @@ export class Dragon {
     });
 
     // legs: diagonal gait (front-left with back-right), pawing when reared, tucked when flying
-    const swing = (phase) => Math.sin(phase) * 0.45 * p.gait;
+    const swing = (phase) => Math.sin(phase) * 0.45 * gait;
     this.legs.backR.rotation.x = p.backLeg + swing(w);
     this.legs.frontL.rotation.x = p.frontLeg + swing(w) + Math.sin(t * 5) * 0.35 * p.paw;
     this.legs.backL.rotation.x = p.backLeg + swing(w + Math.PI);

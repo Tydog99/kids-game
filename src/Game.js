@@ -14,12 +14,21 @@ import { addLights, SKY } from './scene.js';
 import { createRng } from './rng.js';
 import { DayCycle } from './world/DayCycle.js';
 import { WorldDragons } from './world/WorldDragons.js';
+import { GROUND_Y } from './creatures/rideMotor.js';
+import { updateTrust, heartsFor, suggestName, cleanName } from './creatures/trust.js';
+import { DRAGONS } from './creatures/dragonModels.js';
 import { MAX_DRAGONS } from './creatures/dragonSpawns.js';
 import { DAY_LENGTHS, DEFAULT_DAY_INDEX } from './world/skyState.js';
 import { METEOR_RATES, DEFAULT_METEOR_INDEX } from './world/shootingStars.js';
 import { load, save } from './ui/storage.js';
 
 const OAK_TRUNK_RADIUS = 0.16;
+const MOUNT_REACH = 1.3; // how close (to the dragon's body) the player must be to climb on
+const TRUST_SHOW = 7; // show trust hearts when this close to an untrusted dragon
+const WALK_HINT = '⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around';
+const RIDE_HINT = '⬆ fly &nbsp; ⬅ ➡ turn &nbsp; <b>Space</b> up &nbsp; <b>Shift</b> down &nbsp; <b>F</b> breathe &nbsp; <b>E</b> climb off';
+// what's on each tile, for a ridden dragon: how high it reaches and whether it can land there
+const TILE_TOP = { [T.TREE]: 3.8, [T.BUILDING]: 7, [T.WATER]: 1.2, [T.LAVA]: 1.2 };
 
 const TOWN_PREFIX = ['Maple', 'Pebble', 'Ember', 'Mossy', 'Sunny', 'Acorn', 'Willow', 'Cobble', 'Breezy', 'Fern', 'Cinder', 'Berry'];
 const TOWN_SUFFIX = ['Town', 'Village', 'Hollow', 'Meadow', 'City'];
@@ -49,7 +58,12 @@ export class Game {
     this.player = new Player(this.startTile(), characterId, (x, z) => this.walkable(x, z));
     this.scene.add(this.player.object);
     this.playerView = new THREE.Vector3();
-    this.follow = new FollowCamera(this.camera, (x, z) => tileAt(this.world, x, z) === T.BUILDING);
+    this.focusPoint = new THREE.Vector3();
+    // buildings block the camera's view, unless you're flying above them
+    this.follow = new FollowCamera(
+      this.camera,
+      (x, z, y, px, pz) => y < 6 && (tileAt(this.world, x, z) === T.BUILDING || this.dragonAt(px, pz)),
+    );
     this.input = new Input();
     const savedIndex = (key, fallback, count) => {
       const n = Number(load(key, fallback));
@@ -87,6 +101,19 @@ export class Game {
     // dragons roam where they have open ground (no trees, water, buildings or the chest)
     this.dragons = new WorldDragons(this.scene, this.world, (x, z) => this.walkable(x, z) === true);
     this.dragons.setCount(dragonCount);
+    // dragons that trust you are saved per world
+    this.namesKey = `trusted:${seed}`;
+    let names = {};
+    try {
+      names = JSON.parse(load(this.namesKey, '{}')) ?? {};
+    } catch {
+      /* ignore a corrupt save */
+    }
+    this.dragons.setNames(names);
+    this.player.motor.obstacles = () => (this.riding ? [] : this.dragons.obstacles());
+    this.riding = null; // the WorldDragon being ridden
+    this.naming = false;
+    this.refreshMyDragons(true);
 
     if (this.hunt) {
       this.treasureView = new TreasureView(this.scene, this.hunt);
@@ -168,16 +195,210 @@ export class Game {
     return this.towns.find((t) => Math.abs(x - t.cx + 0.5) <= TOWN_HALF && Math.abs(z - t.cz + 0.5) <= TOWN_HALF);
   }
 
+  // ---- dragons: trust, calling, riding ----
+
+  tileForDragon(tx, tz) {
+    const w = this.world;
+    if (this.walkable(tx, tz) === true) return { top: GROUND_Y, land: true };
+    if (tx < 0 || tz < 0 || tx >= w.width || tz >= w.height) return { top: 99, land: false };
+    if (tz * w.width + tx === this.chestTile) return { top: 1.4, land: false };
+    return { top: TILE_TOP[tileAt(w, tx, tz)] ?? 3.8, land: false };
+  }
+
+  // Is a grounded dragon (other than the one being ridden) standing at this point?
+  dragonAt(x, z) {
+    for (const d of this.dragons?.list ?? []) if (d !== this.riding && d.y < GROUND_Y + 1 && d.distanceTo(x, z) < 0.4) return true;
+    return false;
+  }
+
+  playerInfo() {
+    const m = this.player.motor;
+    return { x: m.px, z: m.pz, speed: Math.abs(m.speed), heading: m.yaw };
+  }
+
+  refreshMyDragons(force = false) {
+    this.statusTimer = (this.statusTimer ?? 0) - 1;
+    if (!force && this.statusTimer > 0) return;
+    this.statusTimer = 15;
+    const mine = this.dragons.list.filter((d) => d.trusted).sort((a, b) => a.index - b.index);
+    this.hud.showMyDragons(
+      mine.map((d) => ({
+        index: d.index,
+        name: d.name,
+        color: DRAGONS[d.kind].colors.body,
+        status: d === this.riding ? 'Riding' : d.summon ? 'On the way…' : d.waiting > 0 ? 'Waiting for you' : '',
+      })),
+      (index) => this.callDragon(index),
+    );
+  }
+
+  callDragon(index) {
+    const d = this.dragons.get(index);
+    if (!d) return;
+    if (this.riding) {
+      this.hud.showBanner(this.riding === d ? `You're riding ${d.name}!` : `Climb off ${this.riding.name} first`, true);
+      return;
+    }
+    d.callTo(this.playerInfo());
+    this.hud.showBanner(`${d.name} is on the way!`, true);
+    this.refreshMyDragons(true);
+  }
+
+  // Trust builds with grounded dragons you stay close to; shows hearts over the closest one.
+  updateTrust(dt) {
+    const p = this.playerInfo();
+    let shown = null;
+    for (const d of this.dragons.list) {
+      if (d.trusted) continue;
+      const distance = d.distanceTo(p.x, p.z);
+      if (!this.naming) d.trust = updateTrust(d.trust, dt, { distance, grounded: d.grounded && !d.summon, playerSpeed: p.speed });
+      if (distance < TRUST_SHOW && d.grounded && (!shown || distance < shown.distance)) shown = { d, distance };
+      if (d.trust >= 1 && !this.naming) this.befriend(d);
+    }
+    if (!shown || this.riding) return this.hud.showTrust(null);
+    const { d } = shown;
+    const head = d.dragon.head.getWorldPosition(this.tmpV ?? (this.tmpV = new THREE.Vector3()));
+    head.y += 0.8;
+    head.project(this.camera);
+    if (head.z > 1) return this.hud.showTrust(null); // behind the camera
+    const kind = DRAGONS[d.kind].name;
+    const text =
+      d.trust >= 1 ? `${kind} trusts you!` : shown.distance > 3.5 ? `Come closer to make friends with ${kind}` : p.speed > 0.3 ? `Stay calm… ${kind} is watching you` : `${kind} is getting to know you…`;
+    // keep the bubble on screen even when a big dragon's head is out of view
+    const x = Math.min(innerWidth - 130, Math.max(130, (head.x * 0.5 + 0.5) * innerWidth));
+    const y = Math.min(innerHeight - 160, Math.max(190, (-head.y * 0.5 + 0.5) * innerHeight));
+    this.hud.showTrust({ x, y, hearts: heartsFor(d.trust), text });
+  }
+
+  befriend(d) {
+    this.naming = true;
+    this.hud.showTrust(null);
+    const spec = DRAGONS[d.kind];
+    this.hud.askName({ title: `${spec.name} trusts you!`, suggestion: suggestName(d.kind), color: spec.colors.body }, (name) => {
+      this.naming = false;
+      const names = { ...this.dragons.names, [d.index]: cleanName(name, d.kind) };
+      this.dragons.setNames(names);
+      save(this.namesKey, JSON.stringify(names));
+      this.hud.showBanner(`${names[d.index]} is your dragon! Press E to ride`, true);
+      this.refreshMyDragons(true);
+    });
+  }
+
+  nearestRideable() {
+    const p = this.playerInfo();
+    let best = null;
+    for (const d of this.dragons.list) {
+      if (!d.trusted || !d.grounded || d.summon) continue;
+      const dist = d.distanceTo(p.x, p.z);
+      if (dist < MOUNT_REACH && (!best || dist < best.dist)) best = { d, dist };
+    }
+    return best?.d ?? null;
+  }
+
+  mount(d) {
+    this.riding = d;
+    d.mount((x, z) => this.tileForDragon(x, z));
+    const ch = this.player.character;
+    const s = d.scale;
+    ch.root.removeFromParent();
+    d.dragon.hips.add(ch.root);
+    ch.root.scale.setScalar(1 / s);
+    ch.root.rotation.set(0, 0, 0);
+    // the character's hips (0.4 above its feet) go on the dragon's seat
+    ch.root.position.copy(d.dragon.seat).add(new THREE.Vector3(0, -0.36 / s, 0));
+    ch.seated = true;
+    ch.shadow.visible = false;
+    this.follow.zoomTarget = 1.9 + (s - 1.4) * 0.6;
+    this.hud.setRiding(true);
+    this.hud.setHint(RIDE_HINT);
+    this.hud.showBanner(`Riding ${d.name}! Space to fly up, Shift to fly down`, true);
+    this.refreshMyDragons(true);
+  }
+
+  dismount() {
+    const d = this.riding;
+    const m = this.player.motor;
+    // step off beside the dragon onto open ground
+    const fits = (x, z) => {
+      const tile = this.walkable(Math.floor(x), Math.floor(z));
+      return tile === true && d.distanceTo(x, z) > 0.35;
+    };
+    let spot = null;
+    for (let r = d.bodyR + 1.6; r < d.bodyR + 5 && !spot; r += 0.5)
+      for (let i = 0; i < 16 && !spot; i++) {
+        const a = d.heading + Math.PI / 2 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * (Math.PI / 8);
+        const x = d.x + Math.sin(a) * r, z = d.z + Math.cos(a) * r;
+        if (fits(x, z)) spot = { x, z };
+      }
+    if (!spot) return this.hud.showBanner('No room to climb off here', true);
+    d.dismount();
+    const ch = this.player.character;
+    ch.root.removeFromParent();
+    this.scene.add(ch.root);
+    ch.root.scale.setScalar(1);
+    ch.seated = false;
+    ch.shadow.visible = true;
+    m.px = spot.x;
+    m.pz = spot.z;
+    m.speed = 0;
+    // turn to face the dragon, so the camera ends up behind the player and not inside the dragon
+    m.yaw = Math.atan2(d.x + Math.sin(d.heading) * d.bodyOffset - spot.x, d.z + Math.cos(d.heading) * d.bodyOffset - spot.z);
+    this.player.sync(0);
+    this.follow.first = true;
+    this.riding = null;
+    this.follow.zoomTarget = 1;
+    this.hud.setRiding(false);
+    this.hud.setHint(WALK_HINT);
+    this.refreshMyDragons(true);
+  }
+
   update(dt, t) {
-    this.player.update(dt, this.input, t);
-    const p = this.player.position;
-    this.follow.update(dt, p, this.player.motor.yaw, this.player.motor.speed !== 0);
+    const interact = this.naming ? false : this.input.takeTap('interact');
+    let p;
+    if (this.riding) {
+      const d = this.riding;
+      d.ride(dt, this.naming ? {} : this.input.peek());
+      this.input.clearTaps();
+      // keep the player's position in step for town names, treasure, etc.
+      const m = this.player.motor;
+      m.px = d.x;
+      m.pz = d.z;
+      m.yaw = d.heading;
+      m.speed = d.motor.speed;
+      this.player.character.animate(0, 0, t);
+      if (interact) {
+        if (d.motor.grounded) this.dismount();
+        else this.hud.showBanner('Land first: hold Shift to fly down', true);
+      }
+      p = this.focusPoint.set(d.x, d.y + 0.9 * d.scale, d.z);
+    } else {
+      if (interact) {
+        const d = this.nearestRideable();
+        if (d) this.mount(d);
+      }
+      if (!this.riding) {
+        this.player.update(dt, this.naming ? { peek: () => ({}), clearTaps() {} } : this.input, t);
+        p = this.player.position;
+      } else p = this.focusPoint.set(this.riding.x, this.riding.y + 0.9 * this.riding.scale, this.riding.z);
+    }
+    const yaw = this.riding ? this.riding.heading : this.player.motor.yaw;
+    const moving = this.riding ? this.riding.motor.speed !== 0 : this.player.motor.speed !== 0;
+    this.follow.update(dt, p, yaw, moving);
     this.dayCycle.update(dt, p, this.camera);
     this.camera.updateMatrixWorld();
     this.playerView.set(p.x, p.y + 0.7, p.z).applyMatrix4(this.camera.matrixWorldInverse);
     this.worldView.setPlayerView(this.playerView);
     this.worldView.update(t);
-    this.dragons.update(dt);
+    this.dragons.update(dt, this.riding ? null : this.playerInfo());
+    this.updateTrust(dt);
+    this.refreshMyDragons();
+    if (this.riding) {
+      const d = this.riding;
+      this.hud.showPrompt(d.motor.grounded ? `E · climb off ${d.name}` : null);
+    } else {
+      const d = this.nearestRideable();
+      this.hud.showPrompt(d ? `🐉 E · ride ${d.name}` : null);
+    }
 
     const m = this.player.motor;
     if (this.hunt) this.updateHunt(dt, t, m);
@@ -191,7 +412,10 @@ export class Game {
   }
 
   updateHunt(dt, t, m) {
-    for (const e of this.hunt.update(dt, m.px, m.pz, PLAYER_RADIUS)) {
+    // keys and the chest can be reached from a dragon's back, but not while flying high
+    const reach = this.riding ? (this.riding.y < 3 ? this.riding.bodyR : -1) : PLAYER_RADIUS;
+    const events = reach < 0 ? [] : this.hunt.update(dt, m.px, m.pz, reach);
+    for (const e of events) {
       if (e.type === 'key') {
         this.treasureView.collectKey(e.key);
         this.hud.showKeys(e.count, this.hunt.keys.length);

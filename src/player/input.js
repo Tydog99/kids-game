@@ -5,11 +5,13 @@ const KEYS = {
   ArrowDown: 'back', KeyS: 'back',
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
+  Space: 'up', ShiftLeft: 'down', ShiftRight: 'down',
+  KeyF: 'breathe', KeyE: 'interact',
 };
 
 export class Input {
   constructor(target = window) {
-    this.held = { forward: false, back: false, left: false, right: false };
+    this.held = { forward: false, back: false, left: false, right: false, up: false, down: false, breathe: false, interact: false };
     this.tapped = { ...this.held };
     this.onDown = (e) => {
       const a = KEYS[e.code];
@@ -21,6 +23,7 @@ export class Input {
     };
     this.onUp = (e) => {
       const a = KEYS[e.code];
+      if (a && e.target?.tagName === 'BUTTON') e.preventDefault(); // Space must not click a focused button
       if (a) this.held[a] = false;
     };
     this.onBlur = () => Object.keys(this.held).forEach((k) => (this.held[k] = false));
@@ -35,6 +38,13 @@ export class Input {
     const out = {};
     for (const k in this.held) out[k] = this.held[k] || this.tapped[k];
     return out;
+  }
+
+  // A one-off press (like E to climb on): true once per press.
+  takeTap(a) {
+    const t = this.tapped[a];
+    this.tapped[a] = false;
+    return t;
   }
 
   // Call once a move has started, so a tap isn't replayed.

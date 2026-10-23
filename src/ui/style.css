@@ -266,3 +266,121 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   .dpad { display: block; }
   .hint { display: none; }
 }
+
+/* ---------- dragons: trust, riding, my dragons ---------- */
+.trust-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 6px 12px 8px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: rgba(255, 250, 240, 0.94);
+  box-shadow: var(--shadow);
+  text-align: center;
+  pointer-events: none;
+  max-width: 230px;
+}
+.trust-bubble .hearts { font-size: 20px; letter-spacing: 2px; }
+.trust-text { font-size: 14px; line-height: 1.25; }
+.ride-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 74px;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  font-size: 20px;
+  font-weight: 700;
+  background: var(--yellow);
+  white-space: nowrap;
+}
+.ride-prompt[hidden], .my-dragons[hidden], .trust-bubble[hidden], .flypad[hidden] { display: none; }
+.my-dragons {
+  position: absolute;
+  top: 64px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 170px;
+}
+.my-dragons h2 {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+  text-shadow: 0 2px 0 var(--ink), 1px 0 0 var(--ink), -1px 0 0 var(--ink);
+  text-align: right;
+}
+.my-dragons-list { display: flex; flex-direction: column; gap: 6px; }
+.my-dragon {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  align-items: center;
+  padding: 5px 10px;
+  text-align: left;
+  background: rgba(255, 250, 240, 0.94);
+}
+.my-dragon .swatch {
+  grid-row: 1 / span 2;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--swatch);
+}
+.my-dragon .who { font-size: 17px; font-weight: 700; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.my-dragon small { font-size: 12px; color: #4a5470; }
+.name-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding-inline: 16px;
+  background: rgba(31, 42, 68, 0.35);
+}
+.name-panel {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px 20px;
+  border: 4px solid var(--ink);
+  border-top: 12px solid var(--swatch);
+  border-radius: 16px;
+  background: var(--cream);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.name-burst { font-size: 40px; }
+.name-panel h2 { margin: 0; font-size: 24px; text-wrap: balance; }
+.name-panel label { font-weight: 500; }
+.name-panel input {
+  font: inherit;
+  font-size: 22px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  text-align: center;
+  background: #fff;
+  color: var(--ink);
+  user-select: text;
+}
+.name-panel button[type='submit'] { padding: 8px 22px; font-size: 20px; font-weight: 700; background: var(--yellow); }
+.flypad {
+  display: none;
+  position: absolute;
+  right: 214px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.flypad button { width: 60px; height: 52px; font-size: 22px; background: rgba(255, 250, 240, 0.85); touch-action: none; }
+@media (pointer: coarse) {
+  .hud.riding .flypad:not([hidden]) { display: flex; }
+  .ride-prompt { bottom: 214px; }
+}

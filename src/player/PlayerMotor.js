@@ -19,6 +19,7 @@ export class PlayerMotor {
     this.speed = 0; // current forward speed (negative = backing up)
     this.turnRate = 0;
     this.walkPhase = 0; // grows with distance walked, drives limb swing
+    this.obstacles = () => []; // round things that move around, like dragons: [{ x, z, r }]
   }
 
   get x() {
@@ -69,6 +70,11 @@ export class PlayerMotor {
         if (w === false) return false;
         if (typeof w === 'number' && Math.hypot(x - tx - 0.5, z - tz - 0.5) < w + RADIUS) return false;
       }
+    // can't walk into a dragon; if one ended up overlapping, moving away is still allowed
+    for (const o of this.obstacles()) {
+      const d = Math.hypot(x - o.x, z - o.z);
+      if (d < o.r + RADIUS && d < Math.hypot(this.px - o.x, this.pz - o.z)) return false;
+    }
     return true;
   }
 

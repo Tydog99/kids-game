@@ -28,11 +28,26 @@ export class Character {
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.01;
     this.root.add(shadow);
+    this.shadow = shadow;
+    this.seated = false; // riding: legs astride, hands forward
   }
 
   // phase: walk cycle angle. stride: 0 (standing) .. 1 (full walk). time: seconds, for idle breathing.
   animate(phase, stride, time) {
     const p = this.parts;
+    if (this.seated) {
+      p.legL.rotation.set(-1.25, 0, -0.55);
+      p.legR.rotation.set(-1.25, 0, 0.55);
+      p.armL.rotation.set(-0.95, 0, -0.15);
+      p.armR.rotation.set(-0.95, 0, 0.15);
+      p.torso.rotation.y = 0;
+      this.body.position.y = 0;
+      p.head.rotation.z = Math.sin(time * 1.1) * 0.03;
+      return;
+    }
+    p.legL.rotation.set(0, 0, 0);
+    p.legR.rotation.set(0, 0, 0);
+    p.armL.rotation.y = p.armR.rotation.y = 0;
     const a = Number(stride);
     const swing = Math.sin(phase) * 0.65 * a;
     p.legL.rotation.x = swing;
