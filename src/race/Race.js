@@ -83,7 +83,7 @@ export class Race {
 
   update(dt, t) {
     const g = this.g;
-    this.portal.update(t);
+    this.portal.update(t, g.camera.position);
     this.cooldown -= dt;
     const d = g.riding;
 

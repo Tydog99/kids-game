@@ -111,7 +111,6 @@ export class Story {
       },
       onHome: () => this.onRaceHome(),
     });
-    if (this.p.chapter === 'race') this.raceMarker = this.g.treasureView.addMarker(Math.floor(spot.x), Math.floor(spot.z), '#b58cff');
   }
 
   // Grandpa Ollie's magic ring floats over open ground a little way from his chest.

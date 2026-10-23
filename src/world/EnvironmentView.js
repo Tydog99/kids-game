@@ -1,6 +1,7 @@
 // How burning, frozen and diamond trees and buildings look: the original model is hidden and a
 // copy is shown with a special material, plus flames, smoke, ice shards and ash.
 import * as THREE from 'three';
+import { rainbowDiamond } from './diamondMaterial.js';
 
 const HEIGHT = { tree: 3.2, building: 6 }; // roughly how tall things are, for flames and shards
 const MAX_FLAMES = 900;
@@ -12,8 +13,8 @@ const MATERIALS = {
   burning: () => new THREE.MeshLambertMaterial({ vertexColors: true, color: '#7a4a3a', emissive: '#ff5a1a', emissiveIntensity: 0.35 }),
   frozen: () =>
     new THREE.MeshPhongMaterial({ color: '#bfeaff', emissive: '#2f6f9a', emissiveIntensity: 0.35, specular: '#ffffff', shininess: 120, transparent: true, opacity: 0.88 }),
-  diamond: () =>
-    new THREE.MeshPhongMaterial({ color: '#f2eeff', emissive: '#6a5a9a', emissiveIntensity: 0.35, specular: '#ffffff', shininess: 220, flatShading: true }),
+  // in the colours of Glimmer's breath, twinkling
+  diamond: rainbowDiamond,
 };
 
 // Small particle pool drawn as one InstancedMesh.
@@ -226,6 +227,7 @@ export class EnvironmentView {
   update(dt, burning) {
     this.time += dt;
     // flicker the burning glow
+    this.materials.diamond.userData.time.value = this.time;
     this.materials.burning.emissiveIntensity = 0.3 + Math.sin(this.time * 17) * 0.06 + Math.sin(this.time * 5.3) * 0.05;
 
     // new flames, shared out across everything on fire

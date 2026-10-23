@@ -57,7 +57,9 @@ export class MagicRing {
     return this.group.visible;
   }
 
-  update(t) {
+  // viewer: where it's seen from (the camera); the ring turns to face it
+  update(t, viewer) {
+    if (viewer) this.group.rotation.y = Math.atan2(viewer.x - this.at.x, viewer.z - this.at.z);
     this.swirl.material.uniforms.uTime.value = t;
     this.hoop.rotation.z = Math.sin(t * 0.7) * 0.05;
     for (let i = 0; i < 18; i++) {

@@ -8,6 +8,7 @@ import { Dragon } from '../creatures/Dragon.js';
 import { randomLook } from '../voxel/models/looks.js';
 import { speak } from '../ui/speak.js';
 import { ShowShot } from './ShowShot.js';
+import { rainbowDiamond } from '../world/diamondMaterial.js';
 
 const GROUND = 0.25;
 const TALK_RANGE = 4.5;
@@ -94,7 +95,7 @@ function statue() {
   const d = new Dragon('glimmer');
   d.setMode('sit');
   for (let i = 0; i < 90; i++) d.update(1 / 60);
-  const diamond = new THREE.MeshPhongMaterial({ color: '#c8fff4', emissive: '#2a8a7a', emissiveIntensity: 0.5, specular: '#ffffff', shininess: 160, flatShading: true });
+  const diamond = rainbowDiamond();
   d.root.traverse((o) => {
     if (o.isMesh) {
       o.material = stoneMat;
@@ -280,6 +281,7 @@ export class Village {
         v.shiny = true;
         v.dragon.root.traverse((o) => o.isMesh && (o.material = v.diamond));
       }
+      v.diamond.userData.time.value = t;
       v.sparkles.visible = f > 0.98;
       if (v.sparkles.visible) {
         const o = new THREE.Object3D();
