@@ -89,6 +89,9 @@ export class Story {
     this.refresh();
     game.hud.showGrownUp({ onSkip: () => this.skip(), onReset: () => this.reset(), onJump: (chapter) => this.jumpTo(chapter) });
     if (this.p.hasBook) game.hud.showBookButton(() => this.openBook());
+    // the dragon lands already opened (one for each dragon friend), and beams over unfound nests
+    this.nestMarkers = new Map();
+    for (const kind of REVEAL_ORDER) if (this.p.friends[kind]) this.openLand(kind, false);
     if (LATER.includes(this.p.chapter)) this.startRace();
     if (this.p.chapter === 'village' || this.p.chapter === 'done') this.startVillage();
   }
@@ -96,6 +99,32 @@ export class Story {
   // Things the player can't walk through: Ollie, and the villagers and their things.
   obstacles() {
     return [this.ollie.obstacle, ...(this.village?.obstacles ?? [])];
+  }
+
+  // ---- the dragon lands beyond the map ----
+
+  // Open a dragon's land (its gate), with a beam over its nest until the nest is found.
+  openLand(kind, animate = true) {
+    this.g.realms.unlock(kind, animate);
+    const land = this.g.world.realms?.find((r) => r.kind === kind);
+    if (land && !this.p.nests[kind] && !this.nestMarkers.has(kind)) {
+      this.nestMarkers.set(kind, this.g.treasureView.addMarker(Math.floor(land.nest.x), Math.floor(land.nest.z), BEAM[kind]));
+    }
+  }
+
+  onLockedGate(kind) {
+    this.nag(`This way is closed. Make friends with ${DRAGONS[kind].name} to open it!`);
+  }
+
+  onNest(kind) {
+    const name = DRAGONS[kind].name;
+    if (this.p.nests[kind]) return this.g.hud.showBanner(`${name}'s nest 🥚`);
+    this.set({ type: 'nest', kind });
+    const m = this.nestMarkers.get(kind);
+    if (m) this.g.treasureView.removeMarker(m);
+    this.nestMarkers.delete(kind);
+    this.g.hud.showBanner(`You found ${name}'s nest! 🥚`, true);
+    speakLine(`n_nest_${kind}`);
   }
 
   // ---- chapter 3: the Sky Pitch race ----
@@ -284,12 +313,22 @@ export class Story {
   onBefriend(d, name) {
     this.unmark(d);
     this.set({ type: 'befriended', kind: d.kind, name });
+    // a new friend opens the way to their land
+    this.openLand(d.kind);
+    const land = this.g.world.realms?.find((r) => r.kind === d.kind);
+    const announce = () => land && this.g.hud.showBanner(`A new land is open: ${land.name}! ${land.icon}`, true);
     if (this.p.chapter === 'race') {
       setTimeout(() => {
         this.g.hud.showBanner('You are a real Dragon Keeper! 🏆', true);
-        speakLine(['n_keeper', 'n_race_call']);
+        speakLine(['n_keeper', `n_open_${d.kind}`, 'n_race_call']);
         this.startRace();
       }, 2500);
+      setTimeout(announce, 6500);
+    } else {
+      setTimeout(() => {
+        announce();
+        speakLine(`n_open_${d.kind}`);
+      }, 3000);
     }
   }
 

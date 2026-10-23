@@ -4,7 +4,7 @@ import { T, TILE_INFO } from '../tiles.js';
 import { TREE_KIND } from '../worldgen.js';
 import { createRng } from '../rng.js';
 import { buildGeometry, buildGreedyGeometry, voxelMaterial } from '../voxel/builder.js';
-import { oakTree, pineTree, deadTree } from '../voxel/models/trees.js';
+import { oakTree, pineTree, deadTree, snowyPine, crystalTree } from '../voxel/models/trees.js';
 import { house, store } from '../voxel/models/buildings.js';
 
 const CHUNK = 16; // ground chunk size in tiles
@@ -16,13 +16,19 @@ const TREE_VARIANTS = {
   [TREE_KIND.OAK]: [0, 1, 2, 3].map((v) => oakTree(v)),
   [TREE_KIND.PINE]: [0, 1, 2].map((v) => pineTree(v)),
   [TREE_KIND.DEAD]: [0, 1].map((v) => deadTree(v)),
+  [TREE_KIND.SNOW_PINE]: [0, 1, 2].map((v) => snowyPine(v)),
+  [TREE_KIND.CRYSTAL]: [0, 1, 2, 3].map((v) => crystalTree(v)),
 };
+// the ground under a tree, by kind of tree
+const TREE_GROUND = { [TREE_KIND.DEAD]: T.VOLCANIC, [TREE_KIND.SNOW_PINE]: T.SNOW, [TREE_KIND.CRYSTAL]: T.CRYSTAL };
 
 const DETAIL = {
   grass: ['#7fd16f', '#4a9e3f'],
   flower: ['#f5d33b', '#ffffff', '#e84a7f', '#7aa8ff'],
   pebble: ['#9a8a70', '#8a7a62', '#a89878'],
   rock: ['#2e2626', '#3b302e'],
+  snow: ['#ffffff', '#eef4fd'],
+  crystal: ['#ff9fd0', '#8ff0ff', '#c9a6ff', '#ffe27a'],
 };
 
 // Accumulates faces of axis-aligned boxes into one geometry.
@@ -146,14 +152,17 @@ export class WorldRenderer {
   heightAt(x, z) {
     const w = this.world;
     if (x < 0 || z < 0 || x >= w.width || z >= w.height) return 0.25;
-    return TILE_INFO[w.tiles[z * w.width + x]].height;
+    const t = w.tiles[z * w.width + x];
+    // mountains: craggy, each column of rock its own height
+    if (t === T.ROCK) return 2.2 + (Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * 2.4;
+    return TILE_INFO[t].height;
   }
 
   groundColors(x, z) {
     const w = this.world;
     const i = z * w.width + x;
     const t = w.tiles[i];
-    if (t === T.TREE && w.treeKind[i] === TREE_KIND.DEAD) return TILE_INFO[T.VOLCANIC].colors;
+    if (t === T.TREE && TREE_GROUND[w.treeKind[i]] !== undefined) return TILE_INFO[TREE_GROUND[w.treeKind[i]]].colors;
     return TILE_INFO[t].colors;
   }
 
@@ -226,6 +235,14 @@ export class WorldRenderer {
       }
     } else if (t === T.DIRT && rng.chance(0.25)) {
       tuft(x + rng.int(0, 7) * s, z + rng.int(0, 7) * s, s * 0.5, rng.pick(DETAIL.pebble));
+    } else if (t === T.SNOW && rng.chance(0.3)) {
+      // little drifts of snow
+      const px = x + rng.int(0, 6) * s, pz = z + rng.int(0, 6) * s;
+      batch.box(px, h, pz, px + s * 2, h + s * 0.6, pz + s * 1.5, rng.pick(DETAIL.snow));
+    } else if (t === T.CRYSTAL && rng.chance(0.3)) {
+      // tiny crystal sprigs
+      const px = x + rng.int(0, 7) * s, pz = z + rng.int(0, 7) * s;
+      tuft(px, pz, s * (1 + rng.int(0, 2)), rng.pick(DETAIL.crystal));
     } else if (t === T.VOLCANIC && rng.chance(0.2)) {
       const px = x + rng.int(0, 6) * s, pz = z + rng.int(0, 6) * s;
       batch.box(px, h, pz, px + s * 2, h + s * 1.5, pz + s * 2, rng.pick(DETAIL.rock));

@@ -15,8 +15,10 @@ export function placeDragons(world, count = MAX_DRAGONS) {
   const rng = createRng(`${world.seed}:dragons`);
   const walkable = (x, z) => isWalkable(world, x, z);
   const candidates = [];
-  for (let z = 3; z < world.height - 3; z++)
-    for (let x = 3; x < world.width - 3; x++) {
+  // only in the usual world, not the dragon lands beyond it (realms.js)
+  const W = world.core ?? world.width, H = world.core ?? world.height;
+  for (let z = 3; z < H - 3; z++)
+    for (let x = 3; x < W - 3; x++) {
       if (Math.hypot(x - world.spawn.x, z - world.spawn.z) < 12) continue; // not on top of the player
       if (roomForDragon(walkable, x, z)) candidates.push([x, z]);
     }

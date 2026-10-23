@@ -139,8 +139,9 @@ export class WorldDragon {
     }
     const m = 8;
     return {
-      x: m + this.rng.next() * (this.world.width - 2 * m),
-      z: m + this.rng.next() * (this.world.height - 2 * m),
+      // wandering dragons stay over the usual world (not the dragon lands beyond it)
+      x: m + this.rng.next() * ((this.world.core ?? this.world.width) - 2 * m),
+      z: m + this.rng.next() * ((this.world.core ?? this.world.height) - 2 * m),
     };
   }
 

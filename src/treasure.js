@@ -19,6 +19,8 @@ export function walkDistances(world, sx, sz, blocked = new Set()) {
     for (const [dx, dz] of DIRS) {
       const nx = x + dx, nz = z + dz, ni = nz * world.width + nx;
       if (!isWalkable(world, nx, nz) || blocked.has(ni) || dist[ni] !== -1) continue;
+      // things are only ever placed in the usual world, never in the dragon lands beyond it
+      if (world.core && (nx >= world.core || nz >= world.core)) continue;
       dist[ni] = dist[i] + 1;
       queue.push(ni);
     }

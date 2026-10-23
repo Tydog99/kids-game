@@ -230,5 +230,41 @@
  "sam_thanks": {
   "voice": "sam",
   "text": "Wow! A diamond dragon! It's the most beautiful statue ever! Thank you!"
+ },
+ "n_open_ember": {
+  "voice": "narrator",
+  "text": "A new land is open! Follow the path to the Fire Mountains!"
+ },
+ "n_nest_ember": {
+  "voice": "narrator",
+  "text": "You found Ember's nest! Look at all the eggs!"
+ },
+ "n_locked_ember": {
+  "voice": "narrator",
+  "text": "This way is closed. Make friends with Ember to open it!"
+ },
+ "n_open_glimmer": {
+  "voice": "narrator",
+  "text": "A new land is open! Follow the path to the Crystal Forest!"
+ },
+ "n_nest_glimmer": {
+  "voice": "narrator",
+  "text": "You found Glimmer's nest! Look at all the eggs!"
+ },
+ "n_locked_glimmer": {
+  "voice": "narrator",
+  "text": "This way is closed. Make friends with Glimmer to open it!"
+ },
+ "n_open_frost": {
+  "voice": "narrator",
+  "text": "A new land is open! Follow the path to the Frozen Land!"
+ },
+ "n_nest_frost": {
+  "voice": "narrator",
+  "text": "You found Frost's nest! Look at all the eggs!"
+ },
+ "n_locked_frost": {
+  "voice": "narrator",
+  "text": "This way is closed. Make friends with Frost to open it!"
  }
 }

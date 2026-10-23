@@ -1,6 +1,9 @@
 // One play session: a generated world, the player and the follow camera.
 import * as THREE from 'three';
-import { generateWorld, isWalkable, tileAt, TREE_KIND, TOWN_HALF, DIRS } from './worldgen.js';
+import { isWalkable, tileAt, TREE_KIND, TOWN_HALF, DIRS } from './worldgen.js';
+import { generateRealmWorld, realmAt, REALM_KINDS } from './realms.js';
+import { RealmView } from './world/RealmView.js';
+import { speakLine } from './ui/speak.js';
 import { T } from './tiles.js';
 import { WorldRenderer } from './world/WorldRenderer.js';
 import { Environment } from './world/environment.js';
@@ -34,7 +37,7 @@ const TRUST_SHOW = 7; // show trust hearts when this close to an untrusted drago
 const WALK_HINT = '⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around';
 const RIDE_HINT = '⬆ fly &nbsp; ⬅ ➡ turn &nbsp; <b>Space</b> up &nbsp; <b>Shift</b> down &nbsp; <b>F</b> breathe &nbsp; <b>E</b> climb off';
 // what's on each tile, for a ridden dragon: how high it reaches and whether it can land there
-const TILE_TOP = { [T.TREE]: 3.8, [T.BUILDING]: 7, [T.WATER]: 1.2, [T.LAVA]: 1.2 };
+const TILE_TOP = { [T.TREE]: 3.8, [T.BUILDING]: 7, [T.WATER]: 1.2, [T.LAVA]: 1.2, [T.ROCK]: 4.9 };
 
 const SKY_PITCH = { name: 'The Sky Pitch' };
 const TOWN_PREFIX = ['Maple', 'Pebble', 'Ember', 'Mossy', 'Sunny', 'Acorn', 'Willow', 'Cobble', 'Breezy', 'Fern', 'Cinder', 'Berry'];
@@ -46,7 +49,8 @@ export class Game {
   // onRestart(): start this same world again (adventure: after jumping to a chapter)
   constructor(seed, characterId, onExit, canvas, mode = 'free', onOptions = () => {}, onRestart = () => location.reload()) {
     this.restart = onRestart;
-    this.world = generateWorld(seed);
+    // the usual world, with the dragon lands beyond it (realms.js)
+    this.world = generateRealmWorld(seed);
     this.mode = mode;
     if (mode === 'adventure') {
       this.hunt = new TreasureHunt(placeTreasure(this.world));
@@ -74,7 +78,7 @@ export class Game {
     // buildings block the camera's view, unless you're flying above them
     this.follow = new FollowCamera(
       this.camera,
-      (x, z, y, px, pz) => y < 6 && (tileAt(this.world, x, z) === T.BUILDING || this.dragonAt(px, pz)),
+      (x, z, y, px, pz) => y < 6 && (tileAt(this.world, x, z) === T.BUILDING || tileAt(this.world, x, z) === T.ROCK || this.dragonAt(px, pz)),
     );
     this.input = new Input();
     const savedIndex = (key, fallback, count) => {
@@ -133,6 +137,14 @@ export class Game {
     this.naming = false; // the dragon-naming box is open
     this.modal = false; // something like the Dragon Book is open; the game waits
     this.refreshMyDragons(true);
+
+    // the dragon lands: gates and nests. In free play they're all open; in the adventure each
+    // opens when its dragon becomes your friend (the story opens them).
+    this.realms = new RealmView(this.scene, this.world, {
+      onLocked: (kind) => this.story?.onLockedGate(kind),
+      onNest: (kind) => (this.story ? this.story.onNest(kind) : this.foundNest(kind)),
+    });
+    if (mode !== 'adventure') for (const kind of REALM_KINDS) this.realms.unlock(kind, false);
 
     if (this.hunt) {
       this.treasureView = new TreasureView(this.scene, this.hunt);
@@ -207,6 +219,8 @@ export class Game {
 
   townAt(x, z) {
     if (this.inArena) return SKY_PITCH;
+    const land = realmAt(this.world, Math.floor(x), Math.floor(z));
+    if (land) return (land.title ??= { name: `${land.name[0].toUpperCase()}${land.name.slice(1)} ${land.icon}` });
     return this.towns.find((t) => Math.abs(x - t.cx + 0.5) <= TOWN_HALF && Math.abs(z - t.cz + 0.5) <= TOWN_HALF);
   }
 
@@ -279,10 +293,19 @@ export class Game {
 
   // ---- dragons: trust, calling, riding ----
 
+  // Free play: a nest found.
+  foundNest(kind) {
+    this.hud.showBanner(`You found ${DRAGONS[kind].name}'s nest! 🥚`, true);
+    speakLine(`n_nest_${kind}`);
+  }
+
   tileForDragon(tx, tz) {
     // at the Sky Pitch (adventure chapter 3), off the edge of the map
     if (this.inArena && this.story?.race) return this.story.race.tile(tx, tz);
     const w = this.world;
+    // a dragon land can't be flown into until its gate is open
+    const land = realmAt(w, tx, tz);
+    if (land && !land.open) return { top: 99, land: false };
     if (this.walkable(tx, tz) === true) return { top: GROUND_Y, land: true };
     if (tx < 0 || tz < 0 || tx >= w.width || tz >= w.height) return { top: 99, land: false };
     if (tz * w.width + tx === this.chestTile) return { top: 1.4, land: false };
@@ -489,6 +512,7 @@ export class Game {
     for (const c of this.env.update(dt)) this.applyChange(c);
     this.envView.update(dt, this.env.burning);
     this.updateTrust(dt);
+    this.realms.update(dt, t, this.playerInfo());
     this.refreshMyDragons();
     if (this.riding) {
       const d = this.riding;
@@ -559,6 +583,7 @@ export class Game {
     this.story?.dispose();
     this.treasureView?.dispose();
     this.dayCycle.dispose();
+    this.realms.dispose();
     this.hud.dispose();
     this.worldView.dispose();
     this.envView.dispose();

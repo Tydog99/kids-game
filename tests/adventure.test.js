@@ -84,6 +84,13 @@ describe('adventure progress', () => {
     expect(loadProgress(JSON.stringify(village))).toEqual(village);
   });
 
+  it('found nests are remembered', () => {
+    let p = apply(newProgress(), { type: 'nest', kind: 'frost' });
+    expect(p.nests).toEqual({ frost: true });
+    expect(loadProgress(JSON.stringify(p)).nests).toEqual({ frost: true });
+    expect(loadProgress('{}').nests).toEqual({});
+  });
+
   it('old finished saves pick up at the race', () => {
     expect(loadProgress(JSON.stringify({ chapter: 'done' })).chapter).toBe('race');
     expect(loadProgress(JSON.stringify({ chapter: 'done', raceDone: true, helped: { ember: true, frost: true, glimmer: true } })).chapter).toBe('done');

@@ -28,6 +28,10 @@ between walking, rearing up and flying, and drag to look around.
   then down the middle and through the big hoop, for your best time. Back home, three villagers in
   other towns each need a different dragon: light Mayor Max's bonfire (fire), fill Ice-cream Ivy's
   cart with ice (ice) and make Sculptor Sam's stone dragon statue sparkle (diamonds).
+  Each dragon you befriend opens a corridor through the mountains at the edge of the map to its
+  own land: Ember's **Fire Mountains** (lava and rock spires), Glimmer's **Crystal Forest** and
+  Frost's **Frozen Land** (snowy pines and frozen ponds). Each land has the dragon's nest, full of
+  eggs, at its heart. In Free Play all three lands are open.
   Grown-ups can skip ahead or start over from the settings panel.
 - **Free Play**: everything unlocked, with a slider for how many dragons roam the world.
 

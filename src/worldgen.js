@@ -10,7 +10,7 @@ export const TOWN_HALF = 12; // town area is 24x24 tiles
 // Facing / direction convention shared with the player: 0=N(-z) 1=E(+x) 2=S(+z) 3=W(-x)
 export const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
-export const TREE_KIND = { NONE: 0, OAK: 1, PINE: 2, DEAD: 3 };
+export const TREE_KIND = { NONE: 0, OAK: 1, PINE: 2, DEAD: 3, SNOW_PINE: 4, CRYSTAL: 5 };
 
 export function generateWorld(seed, size = WORLD_SIZE) {
   const rng = createRng(String(seed));

@@ -76,3 +76,39 @@ export function deadTree(variant = 0) {
   for (let y = 0; y < 6; y++) g.set(3 + (y % 2), y, 7 - (y > 2 ? 1 : 0), glow[y % 2]);
   return g;
 }
+
+// Pines in Frost's land, with snow sitting on top of every branch.
+export function snowyPine(variant = 0) {
+  const g = pineTree(variant);
+  for (const v of g.voxels()) {
+    if (g.has(v.x, v.y + 1, v.z) || PINE_NUM.has(v.color) === false) continue;
+    g.set(v.x, v.y, v.z, (v.x + v.z) % 3 ? '#ffffff' : '#e6f0fb');
+  }
+  return g;
+}
+const PINE_NUM = new Set(PINE.map((c) => parseInt(c.slice(1), 16)));
+
+// Glimmer's forest: clusters of tall crystal shards in her colours.
+export function crystalTree(variant = 0) {
+  const rng = createRng(variant + 51);
+  const g = new VoxelGrid();
+  const tints = [
+    ['#ff9fd0', '#ffc2e2', '#f07fbe'],
+    ['#8ff0ff', '#c2f8ff', '#5fd8ea'],
+    ['#c9a6ff', '#e0ccff', '#a884f0'],
+    ['#ffe27a', '#fff0b0', '#f0c84a'],
+  ];
+  const shards = rng.int(3, 5);
+  for (let s = 0; s < shards; s++) {
+    const col = tints[(variant + s) % tints.length];
+    const bx = 3 + rng.int(-2, 2), bz = 3 + rng.int(-2, 2);
+    const h = s === 0 ? rng.int(16, 22) : rng.int(7, 14);
+    const lean = [rng.int(-1, 1), rng.int(-1, 1)];
+    for (let y = 0; y <= h; y++) {
+      const r = y > h - 3 ? 0 : y > h * 0.6 ? 1 : s === 0 ? 1 : 1;
+      const ox = Math.round((lean[0] * y) / 8), oz = Math.round((lean[1] * y) / 8);
+      g.box(bx + ox - (r ? 1 : 0), y, bz + oz - (r ? 1 : 0), bx + ox, y, bz + oz, (x, yy, z) => (x === bx + ox && z === bz + oz ? col[1] : col[(x + yy + z) % 3 === 0 ? 2 : 0]));
+    }
+  }
+  return g;
+}

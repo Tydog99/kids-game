@@ -37,6 +37,7 @@ export function newProgress() {
     raceDone: false, // flown the Sky Pitch course
     bestTime: null, // seconds, the fastest race so far
     helped: {}, // kind → true: the villager who needed that dragon has been helped
+    nests: {}, // kind → true: found that dragon's nest, in its land beyond the map
   };
 }
 
@@ -83,6 +84,7 @@ export function loadProgress(json) {
       quests: { ...(p.quests ?? {}) },
       friends: { ...(p.friends ?? {}) },
       helped: { ...(p.helped ?? {}) },
+      nests: { ...(p.nests ?? {}) },
       bestTime: Number.isFinite(p.bestTime) ? p.bestTime : null,
       raceDone: !!p.raceDone,
     };
@@ -202,6 +204,9 @@ export function apply(p, event) {
       q.raceDone = true;
       if (Number.isFinite(event.time) && (q.bestTime === null || event.time < q.bestTime)) q.bestTime = event.time;
       if (q.chapter === 'race') q.chapter = 'village';
+      break;
+    case 'nest': // found a dragon's nest
+      q.nests = { ...q.nests, [event.kind]: true };
       break;
     case 'helped': // a villager got what they needed from this kind of dragon
       q.helped = { ...q.helped, [event.kind]: true };
