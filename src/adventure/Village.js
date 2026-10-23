@@ -148,6 +148,7 @@ export class Village {
     });
     this.markers = new Map();
     this.shown = null;
+    this.heard = new Set(); // lines already said by themselves; after that, press E to hear them
     this.sync();
   }
 
@@ -175,18 +176,15 @@ export class Village {
     const p = g.playerInfo();
     this.catchBreath();
 
-    // the closest villager talks when you're near
+    // the closest villager talks when you first come near (each line once by itself; E repeats it)
     let near = null;
     for (const job of this.jobs) {
       const d = Math.hypot(p.x - job.person.x, p.z - job.person.z);
       if (d < TALK_RANGE && (!near || d < near.d)) near = { job, d };
     }
     const text = near ? (near.job.done ? near.job.spec.thanks : near.job.spec.want) : null;
-    if (near && this.shown !== text && !g.cutscene) {
-      this.shown = text;
-      g.hud.showSpeech({ who: near.job.spec.name, text, onRead: () => speak(text) });
-      if (!near.job.done || near.job.cheer <= 0) speak(text);
-    } else if (!near && this.shown) {
+    if (near && this.shown !== text && !this.heard.has(text) && !g.cutscene) this.say(near.job, text);
+    else if (!near && this.shown) {
       this.shown = null;
       g.hud.showSpeech(null);
     }
@@ -197,6 +195,20 @@ export class Village {
       job.person.update(dt, t, p, this.shown && near?.job === job);
       this.animate(job, dt, t);
     }
+  }
+
+  say(job, text) {
+    this.shown = text;
+    this.heard.add(text);
+    this.g.hud.showSpeech({ who: job.spec.name, text, onRead: () => speak(text) });
+    speak(text);
+  }
+
+  // The villager close enough to talk to with E: { name, talk() }, or null.
+  talker() {
+    const p = this.g.playerInfo();
+    const job = this.jobs.find((j) => Math.hypot(p.x - j.person.x, p.z - j.person.z) < 2.2);
+    return job ? { name: job.spec.name, talk: () => this.say(job, job.done ? job.spec.thanks : job.spec.want) } : null;
   }
 
   // Breath from the dragon you're riding reaching a villager's thing.
@@ -223,9 +235,7 @@ export class Village {
   helped(job) {
     job.done = true;
     job.cheer = 5;
-    this.shown = job.spec.thanks;
-    this.g.hud.showSpeech({ who: job.spec.name, text: job.spec.thanks, onRead: () => speak(job.spec.thanks) });
-    speak(job.spec.thanks);
+    this.say(job, job.spec.thanks);
     this.g.hud.showBanner(`You helped ${job.spec.name}! 🎉`, true);
     // look at what you did: the camera swings round to the thing and the cheering villager
     if (!this.g.cutscene) {

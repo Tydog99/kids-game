@@ -87,7 +87,6 @@ export class Game {
     this.dayCycle = new DayCycle(this.scene, this.skyScene, this.lights, { dayLength: DAY_LENGTHS[dayIndex] });
     this.dayCycle.shootingStars.perSecond = METEOR_RATES[meteorIndex].perSecond;
     this.hud = new Hud({
-      seed,
       onExit,
       onOptions,
       input: this.input,
@@ -464,7 +463,7 @@ export class Game {
         const d = this.nearestRideable();
         if (d) this.mount(d);
         else if (this.story?.examinable()) this.story.examine(this.story.examinable());
-        else if (this.story?.nearOllie()) this.story.talk();
+        else if (this.story?.talker()) this.story.talker().talk();
       }
       if (!this.riding) {
         this.player.update(dt, blocked ? { peek: () => ({}), clearTaps() {} } : this.input, t);
@@ -497,8 +496,8 @@ export class Game {
     } else {
       const d = this.nearestRideable();
       const look = !d && this.story?.examinable();
-      const ollie = !d && !look && this.story?.nearOllie();
-      this.hud.showPrompt(d ? `🐉 E · ride ${d.name}` : look ? `📖 E · look at ${DRAGONS[look.kind].name}` : ollie ? '💬 E · talk to Grandpa Ollie' : null);
+      const talker = !d && !look && this.story?.talker();
+      this.hud.showPrompt(d ? `🐉 E · ride ${d.name}` : look ? `📖 E · look at ${DRAGONS[look.kind].name}` : talker ? `💬 E · talk to ${talker.name}` : null);
     }
 
     const m = this.player.motor;

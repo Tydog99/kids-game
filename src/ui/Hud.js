@@ -2,14 +2,13 @@ import { DAY_LENGTHS, formatDayLength } from '../world/skyState.js';
 import { METEOR_RATES } from '../world/shootingStars.js';
 import { MAX_DRAGONS } from '../creatures/dragonSpawns.js';
 
-// In-game overlay: seed/share, new world, controls hint, town banner, touch d-pad.
+// In-game overlay: quest tracker, new world, controls hint, town banner, touch d-pad.
 export class Hud {
-  constructor({ seed, onExit, onOptions, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate, dragonCount, onDragonCount, musicVolume, onMusicVolume }) {
+  constructor({ onExit, onOptions, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate, dragonCount, onDragonCount, musicVolume, onMusicVolume }) {
     this.onDebugChange = null;
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
     this.el.innerHTML = `
-      <button class="pill seed" title="Copy this world's seed to share it">🌍 <span></span></button>
       <div class="top-right">
         <button class="pill book-btn" type="button" hidden>📖 Dragon Book</button>
         <button class="pill options" type="button">⚙️ Options</button>
@@ -17,7 +16,7 @@ export class Hud {
       </div>
       <div class="banner"></div>
       <div class="keys" hidden></div>
-      <div class="goal" hidden aria-live="polite"><span class="goal-icon"></span><span class="goal-text"></span></div>
+      <div class="goal" hidden aria-live="polite"><h2 class="goal-head">Quests</h2><span class="goal-icon"></span><span class="goal-text"></span></div>
       <div class="speech" hidden aria-live="polite"><b class="speech-who"></b><span class="speech-text"></span><button type="button" class="speech-read" aria-label="Read out loud">🔊</button></div>
       <div class="daypanel">
         <div class="setting">
@@ -60,14 +59,6 @@ export class Hud {
       <button class="ride-prompt" type="button" hidden></button>
     `;
     document.body.appendChild(this.el);
-    const seedBtn = this.el.querySelector('.seed');
-    seedBtn.querySelector('span').textContent = seed;
-    seedBtn.onclick = () => {
-      navigator.clipboard
-        .writeText(seed)
-        .then(() => this.flash(seedBtn, 'Seed copied!'))
-        .catch(() => this.flash(seedBtn, seed));
-    };
     this.el.querySelector('.exit').onclick = onExit;
     this.el.querySelector('.options').onclick = onOptions;
     this.slider('#dayspeed', dayIndex, (i) => formatDayLength(DAY_LENGTHS[i]), onDaySpeed);
@@ -120,13 +111,6 @@ export class Hud {
     const release = () => input.blur();
     input.addEventListener('pointerup', release);
     input.addEventListener('change', release);
-  }
-
-  flash(btn, text) {
-    const span = btn.querySelector('span');
-    const old = span.textContent;
-    span.textContent = text;
-    setTimeout(() => (span.textContent = old), 1400);
   }
 
   // important banners (treasure hunt news) aren't replaced by town-name banners for a few seconds

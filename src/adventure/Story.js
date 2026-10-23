@@ -84,6 +84,7 @@ export class Story {
       this.book.show(this.bookSpot({ x: st.x + 0.5, z: st.z + 0.5 }));
     }
     this.speechShown = null;
+    this.heard = new Set(); // what Ollie has already said by himself this time
     this.intro = 6; // seconds Ollie's first words stay up wherever the player is
     this.refresh();
     game.hud.showGrownUp({ onSkip: () => this.skip(), onReset: () => this.reset(), onJump: (chapter) => this.jumpTo(chapter) });
@@ -333,6 +334,12 @@ export class Story {
   }
 
   // Pressing E next to Ollie: hear him again.
+  // Someone close enough to talk to with E (Ollie or a villager): { name, talk() }, or null.
+  talker() {
+    if (this.nearOllie()) return { name: 'Grandpa Ollie', talk: () => this.talk() };
+    return this.village?.talker() ?? null;
+  }
+
   talk() {
     this.say(ollieSays(this.p), true);
   }
@@ -340,6 +347,7 @@ export class Story {
   say(text, force = false) {
     if (this.speechShown === text && !force) return;
     this.speechShown = text;
+    this.heard.add(text);
     this.g.hud.showSpeech({ who: 'Grandpa Ollie', text, onRead: () => speak(text) });
     speak(text);
   }
@@ -510,8 +518,11 @@ export class Story {
       this.g.hud.showSpeech(null);
     } else if (this.g.cutscene || this.unboxing !== null || this.holdSpeech > 0) {
       // quiet while the treasure pours out; then his line about the book stays up a while
-    } else if ((near || this.intro > 0) && !this.g.riding) this.say(ollieSays(this.p));
-    else if (this.speechShown) {
+    } else if ((near || this.intro > 0) && !this.g.riding) {
+      // each line once by itself, the first time it comes up; after that, press E to hear it again
+      const text = ollieSays(this.p);
+      if (this.speechShown !== text && !this.heard.has(text)) this.say(text);
+    } else if (this.speechShown) {
       this.speechShown = null;
       this.g.hud.showSpeech(null);
     }

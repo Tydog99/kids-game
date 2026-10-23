@@ -117,7 +117,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 
 /* ---------- hud ---------- */
 .pill { position: absolute; top: 14px; padding: 6px 14px; font-size: 18px; font-weight: 500; }
-.pill.seed { left: 14px; max-width: calc(100vw - 180px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top-right { position: absolute; top: 14px; right: 14px; display: flex; gap: 8px; }
 .top-right .pill { position: static; }
 .options-btn {
@@ -305,11 +304,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 /* ---------- adventure: goal, speech, dragon book ---------- */
 .goal {
   position: absolute;
-  top: 62px;
+  top: 14px;
   left: 14px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 2px 8px;
   max-width: min(360px, calc(100vw - 200px));
   padding: 6px 12px;
   border: 3px solid var(--ink);
@@ -322,6 +322,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 }
 .goal[hidden], .speech[hidden], .book-btn[hidden] { display: none; }
 .goal-icon { font-size: 24px; }
+.goal-head { grid-column: 1 / -1; margin: 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #6a5a2a; }
 .speech {
   position: absolute;
   left: 50%;
