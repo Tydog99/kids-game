@@ -13,13 +13,14 @@ Voice models (from huggingface.co/rhasspy/piper-voices):
   en_US-joe-medium                    CC0
   en_US-kristin-medium                public domain
   en_US-norman-medium                 public domain
+  en_US-libritts_r-medium             CC BY 4.0 (many speakers; the villagers)
 """
 import json, os, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'src', 'audio', 'voices')
 
-# model, piper length scale (higher = slower), ffmpeg filter for the character's sound
+# model, piper length scale (higher = slower), ffmpeg filter for the character's sound[, speaker]
 VOICES = {
     # warm and a bit slower, a touch deeper: a kind old grandpa
     'ollie': ('en_GB-northern_english_male-medium', 1.12, 'asetrate=22050*0.92,aresample=22050,atempo=1.087'),
@@ -30,6 +31,10 @@ VOICES = {
     'glimmer': ('en_US-kristin-medium', 0.92, 'asetrate=22050*1.3,aresample=22050,atempo=0.77'),
     # calm, wise and cool, with an icy echo
     'frost': ('en_US-norman-medium', 1.15, 'asetrate=22050*0.96,aresample=22050,atempo=1.04,aecho=0.8:0.6:110|230:0.35|0.18,highpass=f=120'),
+    # the villagers in chapter 4: three different speakers from one many-voiced model
+    'max': ('en_US-libritts_r-medium', 1.0, 'anull', 200),  # Mayor Max: cheerful
+    'ivy': ('en_US-libritts_r-medium', 0.95, 'anull', 60),  # Ice-cream Ivy: bright
+    'sam': ('en_US-libritts_r-medium', 1.08, 'anull', 400),  # Sculptor Sam: deep and calm
 }
 
 
@@ -40,10 +45,11 @@ def main(models, only=None):
     for line_id, line in lines.items():
         if only and line['voice'] not in only:
             continue
-        model, scale, filt = VOICES[line['voice']]
+        model, scale, filt, *speaker = VOICES[line['voice']]
         with tempfile.TemporaryDirectory() as tmp:
             wav = os.path.join(tmp, 'raw.wav')
-            subprocess.run([piper, '-m', os.path.join(models, model + '.onnx'), '-f', wav, '--length-scale', str(scale)],
+            extra = ['-s', str(speaker[0])] if speaker else []
+            subprocess.run([piper, '-m', os.path.join(models, model + '.onnx'), '-f', wav, '--length-scale', str(scale), *extra],
                            input=line['text'].encode(), check=True, capture_output=True)
             out = os.path.join(OUT, line_id + '.mp3')
             # filter, trim silence at the ends, level, and encode small

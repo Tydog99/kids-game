@@ -23,6 +23,11 @@ between walking, rearing up and flying, and drag to look around.
   chest. Each key you find brings a dragon swooping in (a short cutscene), and it stays
   flying overhead. Opening the chest pours out treasure, then Ollie's
   Dragon Book pops out; picking it up brings the three dragons down to land. Each needs your help before it will trust you. Progress saves per world.
+  Once all three are friends, Grandpa Ollie's magic ring takes you and your dragon to the
+  **Sky Pitch**, a flying-game pitch with tall goal hoops: fly through the golden rings around it,
+  then down the middle and through the big hoop, for your best time. Back home, three villagers in
+  other towns each need a different dragon: light Mayor Max's bonfire (fire), fill Ice-cream Ivy's
+  cart with ice (ice) and make Sculptor Sam's stone dragon statue sparkle (diamonds).
   Grown-ups can skip ahead or start over from the settings panel.
 - **Free Play**: everything unlocked, with a slider for how many dragons roam the world.
 
@@ -61,7 +66,7 @@ seed. A link can also open a world directly: `?seed=pallet` or `#pallet`.
 
 ## Voices
 
-The spoken lines (Grandpa Ollie, the narrator and the dragons) are recordings made with
+The spoken lines (Grandpa Ollie, the narrator, the dragons and the villagers) are recordings made with
 [Piper](https://github.com/rhasspy/piper), an open-source text-to-speech engine, and ffmpeg
 effects. The lines are listed in `src/audio/voiceLines.json`; `scripts/make-voices.py` re-records
 them. Voice models:
@@ -71,6 +76,7 @@ them. Voice models:
 - *Joe* (Ember), CC0
 - *Kristin* (Glimmer), public domain
 - *Norman* (Frost), public domain
+- *LibriTTS-R* (the villagers Max, Ivy and Sam: speakers 200, 60 and 400), CC BY 4.0
 
 Lines without a recording, such as ones using a dragon's chosen name, use the browser's voice.
 

@@ -7,6 +7,8 @@ import { QuestItemsView } from './QuestItemsView.js';
 import { BookView } from './BookView.js';
 import { DragonReveal } from './DragonReveal.js';
 import { LandingShot } from './LandingShot.js';
+import { Race } from '../race/Race.js';
+import { Village } from './Village.js';
 import { openDragonBook } from '../ui/DragonBook.js';
 import { DRAGONS } from '../creatures/dragonModels.js';
 import { speak, speakLine } from '../ui/speak.js';
@@ -17,6 +19,7 @@ const GROUND = 0.25;
 const TALK_RANGE = 4.5; // Ollie's speech shows when the player is this close
 const LOOK_RANGE = 2.2; // how close to a dragon's body to look at it with E
 const BEAM = { ember: '#ff8a4a', glimmer: '#7af0c8', frost: '#9fdcff' };
+const LATER = ['race', 'village', 'done']; // chapters after the dragons are all friends
 const REVEAL_ORDER = ['ember', 'glimmer', 'frost']; // one more dragon shows up with each key
 const REVEAL = {
   ember: { banner: 'Whoa! A fire dragon! 🔥' },
@@ -85,6 +88,84 @@ export class Story {
     this.refresh();
     game.hud.showGrownUp({ onSkip: () => this.skip(), onReset: () => this.reset() });
     if (this.p.hasBook) game.hud.showBookButton(() => this.openBook());
+    if (LATER.includes(this.p.chapter)) this.startRace();
+    if (this.p.chapter === 'village' || this.p.chapter === 'done') this.startVillage();
+  }
+
+  // Things the player can't walk through: Ollie, and the villagers and their things.
+  obstacles() {
+    return [this.ollie.obstacle, ...(this.village?.obstacles ?? [])];
+  }
+
+  // ---- chapter 3: the Sky Pitch race ----
+
+  startRace() {
+    if (this.race) return;
+    const spot = this.ringSpot();
+    this.race = new Race(this.g, spot, {
+      bestTime: this.p.bestTime,
+      nag: (text) => this.nag(text),
+      onFinish: (time) => {
+        this.firstRace = this.p.chapter === 'race';
+        this.set({ type: 'raceDone', time });
+      },
+      onHome: () => this.onRaceHome(),
+    });
+    if (this.p.chapter === 'race') this.raceMarker = this.g.treasureView.addMarker(Math.floor(spot.x), Math.floor(spot.z), '#b58cff');
+  }
+
+  // Grandpa Ollie's magic ring floats over open ground a little way from his chest.
+  ringSpot() {
+    const { chest } = this.g.hunt;
+    const cx = chest.x + 0.5, cz = chest.z + 0.5;
+    const open = (x, z) => this.g.walkable(x, z) === true;
+    const clear = (tx, tz) => {
+      for (let z = tz - 3; z <= tz + 3; z++) for (let x = tx - 3; x <= tx + 3; x++) if (!open(x, z)) return false;
+      return true;
+    };
+    for (const r of [8, 10, 7, 12, 14, 17, 20]) {
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        const tx = Math.floor(cx + Math.sin(a) * r), tz = Math.floor(cz + Math.cos(a) * r);
+        if (!clear(tx, tz) || Math.hypot(tx + 0.5 - this.ollie.x, tz + 0.5 - this.ollie.z) < 4) continue;
+        return { x: tx + 0.5, z: tz + 0.5, heading: Math.atan2(tx + 0.5 - cx, tz + 0.5 - cz) };
+      }
+    }
+    return { x: cx + 6, z: cz, heading: Math.PI / 2 };
+  }
+
+  // Back from the Sky Pitch: after the first race, the village chapter begins.
+  onRaceHome() {
+    if (!this.firstRace) return;
+    this.firstRace = false;
+    if (this.raceMarker) this.g.treasureView.removeMarker(this.raceMarker);
+    this.raceMarker = null;
+    this.startVillage();
+    this.say(ollieSays(this.p), true);
+    this.holdSpeech = 8;
+  }
+
+  // ---- chapter 4: helping the villagers ----
+
+  startVillage() {
+    if (this.village) return;
+    this.village = new Village(this.g, this.p, {
+      story: this,
+      onHelped: (kind) => {
+        this.set({ type: 'helped', kind });
+        this.village.progress = this.p;
+        if (this.p.chapter === 'done') this.finale();
+      },
+      nag: (text) => this.nag(text),
+    });
+  }
+
+  finale() {
+    setTimeout(() => {
+      this.g.hud.showBanner('You helped everyone! Best Dragon Keeper ever! 🏆', true);
+      speakLine('n_finale');
+      this.celebrate = 10; // Ollie jumps for joy
+    }, 3500);
   }
 
   // Where the Dragon Book lands: beside the chest (not hidden behind it), as seen from `from`, a world position.
@@ -203,10 +284,11 @@ export class Story {
   onBefriend(d, name) {
     this.unmark(d);
     this.set({ type: 'befriended', kind: d.kind, name });
-    if (this.p.chapter === 'done') {
+    if (this.p.chapter === 'race') {
       setTimeout(() => {
         this.g.hud.showBanner('You are a real Dragon Keeper! 🏆', true);
-        speakLine('n_keeper');
+        speakLine(['n_keeper', 'n_race_call']);
+        this.startRace();
       }, 2500);
     }
   }
@@ -354,6 +436,19 @@ export class Story {
   // Grown-up shortcut.
   skip() {
     if (this.p.chapter === 'treasure') return this.skipToTreasure();
+    if (this.p.chapter === 'race' || this.p.chapter === 'village') {
+      const before = this.p.chapter;
+      this.set({ type: 'skip' });
+      if (before === 'race') {
+        this.firstRace = true;
+        this.onRaceHome();
+        return this.g.hud.showBanner('Skipped: the race', true);
+      }
+      this.village.progress = this.p;
+      this.village.sync();
+      if (this.p.chapter === 'done') this.finale();
+      return this.g.hud.showBanner('Skipped: one villager helped', true);
+    }
     const hadBook = this.p.hasBook;
     this.set({ type: 'skip' });
     if (!hadBook) {
@@ -414,9 +509,12 @@ export class Story {
       this.speechShown = null;
       this.g.hud.showSpeech(null);
     }
-    this.ollie.cheering = this.unboxing !== null && this.unboxing > UNBOXING - 5;
+    this.celebrate = (this.celebrate ?? 0) - dt;
+    this.ollie.cheering = (this.unboxing !== null && this.unboxing > UNBOXING - 5) || this.celebrate > 0;
     this.ollie.update(dt, t, player, !!this.speechShown);
     this.updateBook(dt, t, player);
+    this.race?.update(dt, t);
+    this.village?.update(dt, t);
 
     // once the Dragon Book is found, the dragons fly down to their resting spots
     if (this.landingAt !== null) {
@@ -483,6 +581,8 @@ export class Story {
   }
 
   dispose() {
+    this.race?.dispose();
+    this.village?.dispose();
     this.book.dispose();
     this.itemsView.dispose();
     this.ollie.dispose();

@@ -36,6 +36,7 @@ const RIDE_HINT = '⬆ fly &nbsp; ⬅ ➡ turn &nbsp; <b>Space</b> up &nbsp; <b>
 // what's on each tile, for a ridden dragon: how high it reaches and whether it can land there
 const TILE_TOP = { [T.TREE]: 3.8, [T.BUILDING]: 7, [T.WATER]: 1.2, [T.LAVA]: 1.2 };
 
+const SKY_PITCH = { name: 'The Sky Pitch' };
 const TOWN_PREFIX = ['Maple', 'Pebble', 'Ember', 'Mossy', 'Sunny', 'Acorn', 'Willow', 'Cobble', 'Breezy', 'Fern', 'Cinder', 'Berry'];
 const TOWN_SUFFIX = ['Town', 'Village', 'Hollow', 'Meadow', 'City'];
 
@@ -125,8 +126,9 @@ export class Game {
       /* ignore a corrupt save */
     }
     this.dragons.setNames(names);
-    this.player.motor.obstacles = () => (this.riding ? [] : [...this.dragons.obstacles(), ...(this.story ? [this.story.ollie.obstacle] : [])]);
+    this.player.motor.obstacles = () => (this.riding ? [] : [...this.dragons.obstacles(), ...(this.story ? this.story.obstacles() : [])]);
     this.riding = null; // the WorldDragon being ridden
+    this.inArena = false; // riding at the Sky Pitch, off the edge of the map (see race/Race.js)
     this.naming = false; // the dragon-naming box is open
     this.modal = false; // something like the Dragon Book is open; the game waits
     this.refreshMyDragons(true);
@@ -203,6 +205,7 @@ export class Game {
   }
 
   townAt(x, z) {
+    if (this.inArena) return SKY_PITCH;
     return this.towns.find((t) => Math.abs(x - t.cx + 0.5) <= TOWN_HALF && Math.abs(z - t.cz + 0.5) <= TOWN_HALF);
   }
 
@@ -276,6 +279,8 @@ export class Game {
   // ---- dragons: trust, calling, riding ----
 
   tileForDragon(tx, tz) {
+    // at the Sky Pitch (adventure chapter 3), off the edge of the map
+    if (this.inArena && this.story?.race) return this.story.race.tile(tx, tz);
     const w = this.world;
     if (this.walkable(tx, tz) === true) return { top: GROUND_Y, land: true };
     if (tx < 0 || tz < 0 || tx >= w.width || tz >= w.height) return { top: 99, land: false };
@@ -396,6 +401,7 @@ export class Game {
   }
 
   dismount() {
+    if (this.inArena) return this.hud.showBanner('Finish the race first! 🏁', true);
     const d = this.riding;
     const m = this.player.motor;
     // step off beside the dragon onto open ground

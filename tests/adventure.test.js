@@ -34,7 +34,45 @@ describe('adventure progress', () => {
     expect(nextGoal(p).text).toBe('Make friends with the dragons (1/3)');
     p = apply(p, { type: 'befriended', kind: 'glimmer', name: 'Twinkle' });
     p = apply(p, { type: 'befriended', kind: 'frost', name: 'Snowy' });
+    expect(p.chapter).toBe('race');
+  });
+
+  it('chapter 3: the race; the best time is kept, and replays never go back a chapter', () => {
+    let p = { ...newProgress(), chapter: 'race' };
+    expect(nextGoal(p).text).toMatch(/magic ring/);
+    expect(ollieSays(p)).toMatch(/Sky Pitch/);
+    p = apply(p, { type: 'raceDone', time: 61.5 });
+    expect(p.chapter).toBe('village');
+    expect(p.bestTime).toBe(61.5);
+    p = apply(p, { type: 'raceDone', time: 70 });
+    expect(p.bestTime).toBe(61.5);
+    p = apply(p, { type: 'raceDone', time: 48 });
+    expect(p.bestTime).toBe(48);
+    expect(p.chapter).toBe('village');
+  });
+
+  it('chapter 4: helping all three villagers finishes the adventure', () => {
+    let p = { ...newProgress(), chapter: 'village', raceDone: true };
+    expect(nextGoal(p).text).toBe('Help the villagers (0/3)');
+    p = apply(p, { type: 'helped', kind: 'frost' });
+    p = apply(p, { type: 'helped', kind: 'frost' });
+    expect(nextGoal(p).text).toBe('Help the villagers (1/3)');
+    expect(ollieSays(p)).toMatch(/Keep going/);
+    p = apply(p, { type: 'helped', kind: 'ember' });
+    p = apply(p, { type: 'helped', kind: 'glimmer' });
     expect(p.chapter).toBe('done');
+  });
+
+  it('skip ahead goes through the race and one villager at a time', () => {
+    let p = apply({ ...newProgress(), chapter: 'race' }, { type: 'skip' });
+    expect(p.chapter).toBe('village');
+    for (let i = 0; i < 3; i++) p = apply(p, { type: 'skip' });
+    expect(p.chapter).toBe('done');
+  });
+
+  it('old finished saves pick up at the race', () => {
+    expect(loadProgress(JSON.stringify({ chapter: 'done' })).chapter).toBe('race');
+    expect(loadProgress(JSON.stringify({ chapter: 'done', raceDone: true, helped: { ember: true, frost: true, glimmer: true } })).chapter).toBe('done');
   });
 
   it('does not change the progress it was given', () => {

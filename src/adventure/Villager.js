@@ -1,9 +1,11 @@
-// Grandpa Ollie: a villager who stands by his treasure chest, turns to watch the player and waves.
+// A villager (Grandpa Ollie, and the townsfolk in chapter 4) who stands still, turns to watch the
+// player and waves while talking.
 import { Character } from '../player/Character.js';
 
 export class Villager {
-  constructor(scene, x, z) {
-    this.character = new Character('grandpa');
+  // id: which character model ('grandpa', 'boy', 'girl'); look: color overrides (looks.js)
+  constructor(scene, x, z, id = 'grandpa', look = null) {
+    this.character = new Character(id, look);
     this.root = this.character.root;
     this.x = x;
     this.z = z;

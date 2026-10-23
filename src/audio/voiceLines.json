@@ -35,10 +35,6 @@
   "voice": "ollie",
   "text": "Follow the colored lights to find what the dragons need. You can do it!"
  },
- "ollie_done": {
-  "voice": "ollie",
-  "text": "You made friends with every dragon. You are a real Dragon Keeper!"
- },
  "n_egg": {
   "voice": "narrator",
   "text": "You found Ember's egg! Carry it back to Ember."
@@ -154,5 +150,85 @@
  "n_see_frost": {
   "voice": "narrator",
   "text": "Look! An icy snow dragon!"
+ },
+ "ollie_race": {
+  "voice": "ollie",
+  "text": "Wow, you made friends with all three dragons! Now ride a dragon through my magic ring. It goes to the Sky Pitch!"
+ },
+ "ollie_village0": {
+  "voice": "ollie",
+  "text": "What a flyer! Now the villagers need help. Follow the lights to find them. Each one needs a different dragon!"
+ },
+ "ollie_village1": {
+  "voice": "ollie",
+  "text": "Keep going! Some villagers still need your help."
+ },
+ "ollie_final": {
+  "voice": "ollie",
+  "text": "You helped everyone! You are the best Dragon Keeper ever!"
+ },
+ "n_race_call": {
+  "voice": "narrator",
+  "text": "Grandpa Ollie has a surprise for you! Go and see him."
+ },
+ "n_race_ride": {
+  "voice": "narrator",
+  "text": "Climb on a dragon, then fly through the magic ring!"
+ },
+ "n_race_welcome": {
+  "voice": "narrator",
+  "text": "Welcome to the Sky Pitch! Fly through all the golden rings. Ready?"
+ },
+ "n_race_middle": {
+  "voice": "narrator",
+  "text": "Now down the middle and through the big hoop!"
+ },
+ "n_race_done": {
+  "voice": "narrator",
+  "text": "You did it! What a flyer!"
+ },
+ "n_race_best": {
+  "voice": "narrator",
+  "text": "That's your best time ever!"
+ },
+ "n_finale": {
+  "voice": "narrator",
+  "text": "Hooray! Every villager is happy, and every dragon is your friend!"
+ },
+ "max_want": {
+  "voice": "max",
+  "text": "It's the big village party tonight, but the giant bonfire won't light! Can a fire dragon help?"
+ },
+ "max_wrong": {
+  "voice": "max",
+  "text": "That bonfire needs fire! Ember breathes fire."
+ },
+ "max_thanks": {
+  "voice": "max",
+  "text": "Hooray! The bonfire is lit! Let the party begin! Thank you!"
+ },
+ "ivy_want": {
+  "voice": "ivy",
+  "text": "It's so hot today and my ice-cream cart has no ice left! Can an ice dragon help?"
+ },
+ "ivy_wrong": {
+  "voice": "ivy",
+  "text": "My cart needs ice! Frost breathes ice."
+ },
+ "ivy_thanks": {
+  "voice": "ivy",
+  "text": "Brrr, lovely and cold! Ice cream for everyone! Thank you!"
+ },
+ "sam_want": {
+  "voice": "sam",
+  "text": "I made a stone dragon statue, but it's so plain and grey. Can a sparkly dragon make it shine?"
+ },
+ "sam_wrong": {
+  "voice": "sam",
+  "text": "My statue needs to sparkle! Glimmer breathes diamonds."
+ },
+ "sam_thanks": {
+  "voice": "sam",
+  "text": "Wow! A diamond dragon! It's the most beautiful statue ever! Thank you!"
  }
 }

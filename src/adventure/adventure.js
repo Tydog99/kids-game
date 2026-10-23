@@ -4,9 +4,13 @@
 //   fly overhead; they can't be reached yet.
 // Chapter 2, 'dragons': Ollie's Dragon Book pops out of the opened chest. Once the player picks it
 //   up, the three dragons (Ember, Glimmer, Frost) land around the world. Each one needs something before it will trust you.
-// The adventure is finished once all three dragons are your friends.
+// Chapter 3, 'race': once all three dragons are your friends, Grandpa Ollie's magic ring takes you
+//   and your dragon to the Sky Pitch, for a race through golden rings.
+// Chapter 4, 'village': three villagers each need a different dragon's breath (fire, ice or
+//   diamonds). Helping all three finishes the adventure.
 
-export const CHAPTERS = ['treasure', 'dragons', 'done'];
+export const CHAPTERS = ['treasure', 'dragons', 'race', 'village', 'done'];
+export const KINDS = ['ember', 'glimmer', 'frost'];
 
 // What each dragon needs before it trusts you.
 export const DRAGON_NEEDS = {
@@ -30,6 +34,9 @@ export function newProgress() {
     gems: [], // indexes of the gems found
     quests: {}, // kind → true once that dragon's quest is done
     friends: {}, // kind → name, once befriended
+    raceDone: false, // flown the Sky Pitch course
+    bestTime: null, // seconds, the fastest race so far
+    helped: {}, // kind → true: the villager who needed that dragon has been helped
   };
 }
 
@@ -39,7 +46,7 @@ export function loadProgress(json) {
   try {
     const p = JSON.parse(json);
     if (!p || typeof p !== 'object') return base;
-    return {
+    const q = {
       ...base,
       ...p,
       chapter: CHAPTERS.includes(p.chapter) ? p.chapter : base.chapter,
@@ -51,7 +58,13 @@ export function loadProgress(json) {
       gems: Array.isArray(p.gems) ? p.gems.filter((g) => Number.isInteger(g) && g >= 0 && g < 5) : [],
       quests: { ...(p.quests ?? {}) },
       friends: { ...(p.friends ?? {}) },
+      helped: { ...(p.helped ?? {}) },
+      bestTime: Number.isFinite(p.bestTime) ? p.bestTime : null,
+      raceDone: !!p.raceDone,
     };
+    // saves from before the race and the village had to be played: pick up from the race
+    if (q.chapter === 'done' && p.raceDone === undefined) q.chapter = 'race';
+    return q;
   } catch {
     return base;
   }
@@ -80,10 +93,11 @@ export function nextGoal(p) {
     if (p.accepted.frost && !p.flower) return { icon: '🌸', text: 'Find the moon flower by a lake, at night' };
     return { icon: '🐉', text: `Make friends with the dragons (${friends}/3)` };
   }
-  return { icon: '🏆', text: 'You are a Dragon Keeper!' };
+  if (p.chapter === 'race') return { icon: '🏁', text: "Ride a dragon through Grandpa Ollie's magic ring" };
+  if (p.chapter === 'village') return { icon: '🏘️', text: `Help the villagers (${KINDS.filter((k) => p.helped[k]).length}/3)` };
+  return { icon: '🏆', text: 'You helped everyone! Dragon Keeper' };
 }
 
-const KINDS = ['ember', 'glimmer', 'frost'];
 const NAMES = { ember: 'Ember', glimmer: 'Glimmer', frost: 'Frost' };
 const ITEM_OWNER = { egg: 'ember', flower: 'frost' };
 
@@ -101,7 +115,12 @@ export function ollieSays(p) {
     if (!KINDS.some((k) => p.accepted[k])) return 'The dragons have landed! Walk up to a dragon and press E to look at it in your Dragon Book. Each one needs your help.';
     return 'Follow the colored lights to find what the dragons need. You can do it!';
   }
-  return 'You made friends with every dragon. You are a real Dragon Keeper!';
+  if (p.chapter === 'race') return 'Wow, you made friends with all three dragons! Now ride a dragon through my magic ring. It goes to the Sky Pitch!';
+  if (p.chapter === 'village') {
+    if (!KINDS.some((k) => p.helped[k])) return 'What a flyer! Now the villagers need help. Follow the lights to find them. Each one needs a different dragon!';
+    return 'Keep going! Some villagers still need your help.';
+  }
+  return 'You helped everyone! You are the best Dragon Keeper ever!';
 }
 
 // Apply something that happened. Returns the new progress (never changes the old one).
@@ -153,7 +172,16 @@ export function apply(p, event) {
       break;
     case 'befriended':
       q.friends[event.kind] = event.name;
-      if (Object.keys(q.friends).length >= 3) q.chapter = 'done';
+      if (q.chapter === 'dragons' && Object.keys(q.friends).length >= 3) q.chapter = 'race';
+      break;
+    case 'raceDone': // finished the Sky Pitch course in event.time seconds
+      q.raceDone = true;
+      if (Number.isFinite(event.time) && (q.bestTime === null || event.time < q.bestTime)) q.bestTime = event.time;
+      if (q.chapter === 'race') q.chapter = 'village';
+      break;
+    case 'helped': // a villager got what they needed from this kind of dragon
+      q.helped = { ...q.helped, [event.kind]: true };
+      if (q.chapter === 'village' && KINDS.every((k) => q.helped[k])) q.chapter = 'done';
       break;
     case 'skip': // grown-up shortcut: jump to the next step
       if (q.chapter === 'treasure') {
@@ -171,6 +199,13 @@ export function apply(p, event) {
           q.accepted[kind] = true;
           if (q.carrying && ITEM_OWNER[q.carrying] === kind) q.carrying = null;
         }
+      } else if (q.chapter === 'race') {
+        q.raceDone = true;
+        q.chapter = 'village';
+      } else if (q.chapter === 'village') {
+        const kind = KINDS.find((k) => !q.helped[k]);
+        q.helped = { ...q.helped, [kind]: true };
+        if (KINDS.every((k) => q.helped[k])) q.chapter = 'done';
       }
       break;
   }

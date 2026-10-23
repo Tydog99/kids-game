@@ -16,7 +16,7 @@ export function openOptionsMenu({ onDragons, onMusic }) {
         <span class="options-icon" aria-hidden="true">🎵</span>
         <span><strong>Music</strong><br /><small>Listen to the five themes and pick the one you like.</small></span>
       </button>
-      <p class="options-credits">Voices made with Piper text-to-speech, using the Northern English Male (CC BY-SA 4.0), Alba (CC BY 4.0), Joe (CC0), Kristin and Norman (public domain) voices.</p>
+      <p class="options-credits">Voices made with Piper text-to-speech, using the Northern English Male (CC BY-SA 4.0), Alba (CC BY 4.0), Joe (CC0), Kristin and Norman (public domain), and LibriTTS-R (CC BY 4.0) voices.</p>
     </div>`;
   document.body.appendChild(el);
   const close = () => {

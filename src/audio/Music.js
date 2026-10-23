@@ -151,6 +151,30 @@ export class Music {
     osc.stop(time + dur + 0.02);
   }
 
+  // A quick bright jingle (one note after another), for rings and magic. Plays even when the
+  // music is turned down, as long as sound has been allowed.
+  chime(hz) {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return;
+    if (!this.fx) {
+      this.fx = ctx.createGain();
+      this.fx.gain.value = 0.5;
+      this.fx.connect(this.comp);
+    }
+    hz.forEach((f, i) => {
+      const t = ctx.currentTime + i * 0.07;
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.25, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.connect(g).connect(this.fx);
+      osc.start(t);
+      osc.stop(t + 0.36);
+    });
+  }
+
   kick(time, vel) {
     const ctx = this.ctx;
     const osc = ctx.createOscillator(), g = ctx.createGain();
