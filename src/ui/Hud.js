@@ -150,7 +150,7 @@ export class Hud {
     this.input.used = false; // fades again once they press something
   }
 
-  // Trust hearts floating over a dragon's head; null hides it.
+  // Trust hearts for the nearest wild dragon, shown at the bottom of the screen; null hides it.
   showTrust(info) {
     const b = this.trustBubble;
     if (!info) {
@@ -158,7 +158,7 @@ export class Hud {
       return;
     }
     b.hidden = false;
-    b.style.transform = `translate(${Math.round(info.x)}px, ${Math.round(info.y)}px) translate(-50%, -100%)`;
+    b.style.setProperty('--swatch', info.color);
     const hearts = Array.from({ length: 5 }, (_, i) => (i < info.hearts ? '💛' : '🤍')).join('');
     if (b.dataset.hearts !== hearts) {
       b.querySelector('.hearts').textContent = hearts;

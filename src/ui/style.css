@@ -270,16 +270,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 /* ---------- dragons: trust, riding, my dragons ---------- */
 .trust-bubble {
   position: absolute;
-  left: 0;
-  top: 0;
-  padding: 6px 12px 8px;
+  left: 50%;
+  bottom: 74px;
+  transform: translateX(-50%);
+  padding: 6px 16px 8px;
   border: 3px solid var(--ink);
+  border-left: 10px solid var(--swatch, var(--ink));
   border-radius: 14px;
   background: rgba(255, 250, 240, 0.94);
   box-shadow: var(--shadow);
   text-align: center;
   pointer-events: none;
-  max-width: 230px;
+  max-width: calc(100vw - 32px);
+  white-space: nowrap;
 }
 .trust-bubble .hearts { font-size: 20px; letter-spacing: 2px; }
 .trust-text { font-size: 14px; line-height: 1.25; }
@@ -294,6 +297,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   background: var(--yellow);
   white-space: nowrap;
 }
+/* when the trust hearts are showing too, the ride prompt sits above them */
+.hud:has(.trust-bubble:not([hidden])) .ride-prompt { bottom: 150px; }
 .ride-prompt[hidden], .my-dragons[hidden], .trust-bubble[hidden], .flypad[hidden] { display: none; }
 .my-dragons {
   position: absolute;
@@ -382,5 +387,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .flypad button { width: 60px; height: 52px; font-size: 22px; background: rgba(255, 250, 240, 0.85); touch-action: none; }
 @media (pointer: coarse) {
   .hud.riding .flypad:not([hidden]) { display: flex; }
+  .trust-bubble { bottom: 214px; }
   .ride-prompt { bottom: 214px; }
 }

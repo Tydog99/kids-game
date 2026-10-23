@@ -244,7 +244,7 @@ export class Game {
     this.refreshMyDragons(true);
   }
 
-  // Trust builds with grounded dragons you stay close to; shows hearts over the closest one.
+  // Trust builds with grounded dragons you stay close to; shows hearts for the closest one.
   updateTrust(dt) {
     const p = this.playerInfo();
     let shown = null;
@@ -257,17 +257,10 @@ export class Game {
     }
     if (!shown || this.riding) return this.hud.showTrust(null);
     const { d } = shown;
-    const head = d.dragon.head.getWorldPosition(this.tmpV ?? (this.tmpV = new THREE.Vector3()));
-    head.y += 0.8;
-    head.project(this.camera);
-    if (head.z > 1) return this.hud.showTrust(null); // behind the camera
     const kind = DRAGONS[d.kind].name;
     const text =
       d.trust >= 1 ? `${kind} trusts you!` : shown.distance > 3.5 ? `Come closer to make friends with ${kind}` : p.speed > 0.3 ? `Stay calm… ${kind} is watching you` : `${kind} is getting to know you…`;
-    // keep the bubble on screen even when a big dragon's head is out of view
-    const x = Math.min(innerWidth - 130, Math.max(130, (head.x * 0.5 + 0.5) * innerWidth));
-    const y = Math.min(innerHeight - 160, Math.max(190, (-head.y * 0.5 + 0.5) * innerHeight));
-    this.hud.showTrust({ x, y, hearts: heartsFor(d.trust), text });
+    this.hud.showTrust({ hearts: heartsFor(d.trust), text, color: DRAGONS[d.kind].colors.body });
   }
 
   befriend(d) {
