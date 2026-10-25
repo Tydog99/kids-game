@@ -35,6 +35,8 @@ const ENV_TOP = { tree: 3.6, building: 6.8 }; // breath below this height hits t
 const MOUNT_REACH = 1.3; // how close (to the dragon's body) the player must be to climb on
 const TRUST_SHOW = 7; // show trust hearts when this close to an untrusted dragon
 const WALK_HINT = '⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around';
+const PAD_WALK_HINT = '🎮 stick: walk &nbsp; <b>A</b> talk / ride &nbsp; right stick: look around';
+const PAD_RIDE_HINT = '🎮 stick: fly &nbsp; <b>R</b> up &nbsp; <b>L</b> down &nbsp; <b>B</b> breathe &nbsp; <b>A</b> climb off';
 const RIDE_HINT = '⬆ fly &nbsp; ⬅ ➡ turn &nbsp; <b>Space</b> up &nbsp; <b>Shift</b> down &nbsp; <b>F</b> breathe &nbsp; <b>E</b> climb off';
 // what's on each tile, for a ridden dragon: how high it reaches and whether it can land there
 const TILE_TOP = { [T.TREE]: 3.8, [T.BUILDING]: 7, [T.WATER]: 1.2, [T.LAVA]: 1.2, [T.ROCK]: 4.9 };
@@ -419,8 +421,8 @@ export class Game {
     ch.shadow.visible = false;
     this.follow.zoomTarget = 1.9 + (s - 1.4) * 0.6;
     this.hud.setRiding(true);
-    this.hud.setHint(RIDE_HINT);
-    this.hud.showBanner(`Riding ${d.name}! Space to fly up, Shift to fly down`, true);
+    this.hud.setHint(this.hint());
+    this.hud.showBanner(`Riding ${d.name}! ${this.input.padConnected ? 'R to fly up, L to fly down' : 'Space to fly up, Shift to fly down'}`, true);
     this.refreshMyDragons(true);
   }
 
@@ -455,11 +457,12 @@ export class Game {
     this.riding = null;
     this.follow.zoomTarget = 1;
     this.hud.setRiding(false);
-    this.hud.setHint(WALK_HINT);
+    this.hud.setHint(this.hint());
     this.refreshMyDragons(true);
   }
 
   update(dt, t) {
+    this.updateController(dt);
     const locked = !!this.cutscene?.locked; // a cutscene is playing: the player waits
     const blocked = this.naming || this.modal || locked;
     if (this.modal || locked) this.input.clearTaps();
@@ -534,6 +537,38 @@ export class Game {
       this.currentTown = town;
     }
     this.hud.update();
+  }
+
+  // The controls hint at the bottom, for the keyboard or the game controller.
+  hint() {
+    if (this.input.padConnected) return this.riding ? PAD_RIDE_HINT : PAD_WALK_HINT;
+    return this.riding ? RIDE_HINT : WALK_HINT;
+  }
+
+  // The game controller: the right stick looks around, and A or B answers a dialog that's open
+  // (the naming box, the Dragon Book).
+  updateController(dt) {
+    const input = this.input;
+    input.poll();
+    if (input.padConnected !== this.padWasConnected) {
+      this.padWasConnected = input.padConnected;
+      if (input.padConnected) this.hud.showBanner('🎮 Controller ready!', true);
+      this.hud.setHint(this.hint());
+    }
+    if (input.look) {
+      this.follow.addOrbit(-input.look * dt * 2.6);
+      this.follow.dragging = true;
+      this.padLooking = true;
+    } else if (this.padLooking) {
+      this.follow.dragging = false;
+      this.padLooking = false;
+    }
+    if ((this.naming || this.modal) && input.padConnected && (input.pad.interact || input.pad.breathe) && (input.tapped.interact || input.tapped.breathe)) {
+      input.clearTaps();
+      const form = document.querySelector('.name-panel');
+      if (form) form.requestSubmit();
+      else document.querySelector('.dragon-book .options-close')?.click();
+    }
   }
 
   updateHunt(dt, t, m) {

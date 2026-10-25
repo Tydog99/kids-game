@@ -45,6 +45,19 @@ between walking, rearing up and flying, and drag to look around.
 
 Touch screens get an on-screen D-pad.
 
+**Game controller** (8BitDo SN30 Pro, Xbox, PlayStation and other pads with the standard
+layout; put the SN30 Pro in X-input mode by holding Start + X when switching it on):
+
+| Button | Does |
+|---|---|
+| Left stick / D-pad | walk and turn (fly when riding) |
+| Right stick | look around |
+| A (right button) | talk, look at a dragon, climb on or off |
+| B (bottom button) | breathe fire, ice or diamonds |
+| R / ZR / Y | fly up |
+| L / ZL / X | fly down |
+| Start | Play (on the title screen) |
+
 ## Worlds & seeds
 
 Every world comes from a **seed** (the text box on the title screen). The same
