@@ -79,7 +79,7 @@ export class DragonViewer {
       <header class="dv-top">
         ${onBack ? '<button class="dv-back" type="button">← Back</button>' : ''}
         <h1>Dragon <span>Designs</span></h1>
-        <p>Three dragons for Voxel Explorer. Each one walks on all fours, rears up on its back legs, flies, and breathes fire, ice or diamonds. Drag to look around.</p>
+        <p>Three dragons for Dragon Riders! Each one walks on all fours, rears up on its back legs, flies, and breathes fire, ice or diamonds. Drag to look around.</p>
       </header>
       <section class="dv-dock">
         <div class="dv-poses" role="radiogroup" aria-label="Pose">

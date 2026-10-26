@@ -45,7 +45,7 @@ export class TitleScreen {
     this.el.className = 'overlay title';
     this.el.innerHTML = `
       <button class="options-btn" type="button">⚙️ Options</button>
-      <h1>Voxel <span>Explorer</span></h1>
+      <h1>Dragon <span>Riders!</span></h1>
       <div class="spacer"></div>
       <div class="cards">
         ${Object.entries(CHARACTERS).map(([id, c]) => `<button class="card" data-id="${id}">${c.label}</button>`).join('')}

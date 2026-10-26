@@ -1,4 +1,4 @@
-# Voxel Explorer
+# Dragon Riders!
 
 A browser game for kids: choose a boy or girl and explore a procedurally
 generated voxel world inspired by the original Pokémon games.
@@ -12,7 +12,7 @@ npm run dev        # open the printed localhost URL
 
 `npm run build` makes a static site in `dist/`, which can be hosted anywhere
 (GitHub Pages, Netlify, or any web server). `npm run build:single` writes each page
-(`voxel-explorer.html` and `dragon-designs.html`) to `dist-single/` as one self-contained file.
+(`dragon-riders.html` and `dragon-designs.html`) to `dist-single/` as one self-contained file.
 
 `/dragons.html` is a viewer for the three dragon designs (Ember, Glimmer, Frost): switch
 between walking, rearing up and flying, and drag to look around.

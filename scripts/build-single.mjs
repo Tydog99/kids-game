@@ -3,7 +3,7 @@
 import { build } from 'vite';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 
-const PAGES = { 'voxel-explorer': 'index.html', 'dragon-designs': 'dragons.html' };
+const PAGES = { 'dragon-riders': 'index.html', 'dragon-designs': 'dragons.html' };
 
 mkdirSync('dist-single', { recursive: true });
 for (const [name, page] of Object.entries(PAGES)) {
