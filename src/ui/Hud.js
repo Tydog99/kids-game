@@ -192,11 +192,17 @@ export class Hud {
   // A villager's speech box with a read-aloud button; null hides it.
   showSpeech(speech) {
     const b = this.el.querySelector('.speech');
+    this.speechText = speech?.text ?? null;
     b.hidden = !speech;
     if (!speech) return;
     b.querySelector('.speech-who').textContent = speech.who;
     b.querySelector('.speech-text').textContent = speech.text;
     b.querySelector('.speech-read').onclick = speech.onRead;
+  }
+
+  // Hide the speech box, but only if it's still showing this text (someone else may be talking now).
+  hideSpeech(text) {
+    if (this.speechText === text) this.showSpeech(null);
   }
 
   showBookButton(onClick) {

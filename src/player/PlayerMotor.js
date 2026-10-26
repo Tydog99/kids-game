@@ -20,6 +20,7 @@ export class PlayerMotor {
     this.turnRate = 0;
     this.walkPhase = 0; // grows with distance walked, drives limb swing
     this.obstacles = () => []; // round things that move around, like dragons: [{ x, z, r }]
+    this.onIce = () => false; // (x, z) → true where the ground is ice: you skate (slide) there
   }
 
   get x() {
@@ -37,8 +38,10 @@ export class PlayerMotor {
     if (!turn && Math.abs(this.turnRate) < 0.01) this.turnRate = 0;
     this.yaw += this.turnRate * dt;
 
-    const want = intent.forward ? WALK_SPEED : intent.back ? -BACK_SPEED : 0;
-    this.speed += (want - this.speed) * (1 - Math.exp(-12 * dt));
+    // on ice you skate: a bit faster, and you glide on when you let go
+    const ice = this.onIce(this.px, this.pz);
+    const want = intent.forward ? WALK_SPEED * (ice ? 1.4 : 1) : intent.back ? -BACK_SPEED : 0;
+    this.speed += (want - this.speed) * (1 - Math.exp(-(ice ? 1.6 : 12) * dt));
     if (!want && Math.abs(this.speed) < 0.02) this.speed = 0;
 
     const step = this.speed * dt;

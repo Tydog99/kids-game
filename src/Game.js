@@ -4,6 +4,7 @@ import { isWalkable, tileAt, TREE_KIND, TOWN_HALF, DIRS } from './worldgen.js';
 import { generateRealmWorld, realmAt, REALM_KINDS } from './realms.js';
 import { RealmView } from './world/RealmView.js';
 import { RealmLife } from './world/RealmLife.js';
+import { FrostQuest } from './lands/FrostQuest.js';
 import { speakLine } from './ui/speak.js';
 import { T } from './tiles.js';
 import { WorldRenderer } from './world/WorldRenderer.js';
@@ -134,7 +135,7 @@ export class Game {
       /* ignore a corrupt save */
     }
     this.dragons.setNames(names);
-    this.player.motor.obstacles = () => (this.riding ? [] : [...this.dragons.obstacles(), ...(this.story ? this.story.obstacles() : [])]);
+    this.player.motor.obstacles = () => (this.riding ? [] : [...this.dragons.obstacles(), ...(this.story ? this.story.obstacles() : []), ...(this.frostQuest?.obstacles ?? [])]);
     this.riding = null; // the WorldDragon being ridden
     this.inArena = false; // riding at the Sky Pitch, off the edge of the map (see race/Race.js)
     this.naming = false; // the dragon-naming box is open
@@ -156,6 +157,11 @@ export class Game {
       this.hud.hideDragonSlider();
       this.story = new Story(this);
     }
+    // the quests in the dragon lands
+    const frost = this.world.realms?.find((r) => r.kind === 'frost');
+    if (frost?.quest) this.frostQuest = new FrostQuest(this, frost, { nag: (text) => (this.story ? this.story.nag(text) : this.hud.showBanner(text, true)) });
+    // skating: the player slides about on ice
+    this.player.motor.onIce = (x, z) => tileAt(this.world, Math.floor(x), Math.floor(z)) === T.ICE;
 
     const nameRng = createRng(`${seed}:names`);
     const prefixes = [...TOWN_PREFIX];
@@ -494,7 +500,7 @@ export class Game {
         const d = this.nearestRideable();
         if (d) this.mount(d);
         else if (this.story?.examinable()) this.story.examine(this.story.examinable());
-        else if (this.story?.talker()) this.story.talker().talk();
+        else if (this.talker()) this.talker().talk();
       }
       if (!this.riding) {
         this.player.update(dt, blocked ? { peek: () => ({}), clearTaps() {} } : this.input, t);
@@ -522,6 +528,7 @@ export class Game {
     this.updateTrust(dt);
     this.realms.update(dt, t, this.playerInfo());
     this.realmLife.update(dt, t, this.playerInfo());
+    this.frostQuest?.update(dt, t);
     this.refreshMyDragons();
     if (this.riding) {
       const d = this.riding;
@@ -529,7 +536,7 @@ export class Game {
     } else {
       const d = this.nearestRideable();
       const look = !d && this.story?.examinable();
-      const talker = !d && !look && this.story?.talker();
+      const talker = !d && !look && this.talker();
       this.hud.showPrompt(d ? `🐉 E · ride ${d.name}` : look ? `📖 E · look at ${DRAGONS[look.kind].name}` : talker ? `💬 E · talk to ${talker.name}` : null);
     }
 
@@ -542,13 +549,32 @@ export class Game {
       else if (this.currentTown) this.hud.showBanner('Route');
       this.currentTown = town;
     }
+    this.updateGoal();
     this.updateCompass();
     this.hud.update();
   }
 
+  // Someone close enough to talk to with E: { name, talk() }, or null.
+  talker() {
+    return this.story?.talker() ?? this.frostQuest?.talker() ?? null;
+  }
+
+  // The quest box shows the story's goal, or a land's own quest while you're in that land.
+  setMainGoal(goal) {
+    this.mainGoal = goal;
+  }
+
+  updateGoal() {
+    const goal = this.frostQuest?.goalHere(this.playerInfo()) ?? this.mainGoal ?? null;
+    const key = goal ? goal.icon + goal.text : '';
+    if (key === this.goalShown) return;
+    this.goalShown = key;
+    this.hud.showGoal(goal);
+  }
+
   // The quest compass: which way (from where the camera looks) to the quest's target, and how far.
   updateCompass() {
-    const target = this.story?.compassTarget();
+    const target = this.frostQuest?.target(this.playerInfo()) ?? this.story?.compassTarget();
     if (!target) return this.hud.showCompass(null);
     const p = this.playerInfo();
     const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz);
@@ -641,6 +667,7 @@ export class Game {
     this.dayCycle.dispose();
     this.realms.dispose();
     this.realmLife.dispose();
+    this.frostQuest?.dispose();
     this.hud.dispose();
     this.worldView.dispose();
     this.envView.dispose();

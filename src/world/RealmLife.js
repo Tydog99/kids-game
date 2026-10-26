@@ -185,7 +185,7 @@ function snowman() {
   return g;
 }
 
-function penguin() {
+export function penguin() {
   const g = new THREE.Group();
   const body = new THREE.Group();
   const black = lambert('#22252e'), white = lambert('#ffffff'), orange = lambert('#ff9a2a');

@@ -23,7 +23,8 @@ export const REALM_KINDS = ['ember', 'glimmer', 'frost'];
 export const REALMS = {
   ember: { name: 'the Fire Mountains', icon: '🔥', side: 'east', x0: 146, z0: 6, x1: 202, z1: 62, ground: T.VOLCANIC },
   glimmer: { name: 'the Crystal Forest', icon: '💎', side: 'east', x0: 146, z0: 70, x1: 202, z1: 124, ground: T.CRYSTAL },
-  frost: { name: 'the Frozen Land', icon: '❄️', side: 'south', x0: 36, z0: 146, x1: 92, z1: 202, ground: T.SNOW },
+  // the Frozen Land is twice as wide, for its penguin quests (lands/frostQuest.js)
+  frost: { name: 'the Frozen Land', icon: '❄️', side: 'south', x0: 8, z0: 146, x1: 120, z1: 202, ground: T.SNOW },
 };
 
 export function generateRealmWorld(seed) {
@@ -120,6 +121,40 @@ export function generateRealmWorld(seed) {
         } else if (d <= L.r + 2) set(x, z, R.ground);
       }
 
+    // 4b. the Frozen Land's quest places: a big lake to freeze for a skating party, Mama Penguin's
+    // colony, and the tall snowy peak where the Penguin King lost his crown
+    let quest = null;
+    if (kind === 'frost') {
+      const lake = { x: R.x0 + 22, z: cz - 2, rx: 8, rz: 5, tiles: [] };
+      for (let z = lake.z - lake.rz - 3; z <= lake.z + lake.rz + 3; z++)
+        for (let x = lake.x - lake.rx - 3; x <= lake.x + lake.rx + 3; x++) {
+          const e = ((x - lake.x) / lake.rx) ** 2 + ((z - lake.z) / lake.rz) ** 2;
+          if (e <= 1) {
+            set(x, z, T.WATER);
+            lake.tiles.push(idx(x, z));
+          } else if (e <= 1.9) set(x, z, R.ground); // a snowy shore all round
+        }
+      const colony = { x: R.x1 - 24, z: cz - 3 };
+      for (let z = colony.z - 6; z <= colony.z + 6; z++) for (let x = colony.x - 6; x <= colony.x + 6; x++) if (Math.hypot(x - colony.x, z - colony.z) <= 6.5) set(x, z, R.ground);
+      const peak = { x: R.x1 - 10, z: R.z1 - 11, r: 7 };
+      for (let z = peak.z - peak.r - 2; z <= peak.z + peak.r + 2; z++)
+        for (let x = peak.x - peak.r - 2; x <= peak.x + peak.r + 2; x++) {
+          const d = Math.hypot(x - peak.x, z - peak.z);
+          if (d <= peak.r) {
+            set(x, z, T.ROCK);
+            heights.set(idx(x, z), 2 + (peak.r - d) * 1.6);
+            styles.set(idx(x, z), ROCK_STYLE.frost);
+          } else if (d <= peak.r + 2) set(x, z, R.ground);
+        }
+      // a path from the lake, past the nest, to the colony
+      for (let x = lake.x + lake.rx + 1; x <= colony.x; x++) for (let d = -1; d <= 1; d++) open(x, cz + d, R.ground);
+      quest = {
+        lake: { x: lake.x + 0.5, z: lake.z + 0.5, rx: lake.rx, rz: lake.rz, tiles: lake.tiles },
+        colony: { x: colony.x + 0.5, z: colony.z + 0.5 },
+        peak: { x: peak.x + 0.5, z: peak.z + 0.5, top: 2 + peak.r * 1.6 },
+      };
+    }
+
     // 5. little things: snowmen and penguins, lava bubbles and fire sprites, crystal flowers and
     // butterflies, on open ground away from the nest, the landmark and the path
     const spots = [];
@@ -128,6 +163,7 @@ export function generateRealmWorld(seed) {
         if (tiles[idx(x, z)] !== R.ground) continue;
         if (Math.hypot(x - cx, z - cz) < NEST_CLEAR + 2 || Math.hypot(x - lx, z - lz) < L.r + 3) continue;
         if (Math.abs((east ? z : x) - c) <= CORRIDOR + 1) continue;
+        if (quest && Math.hypot(x - quest.colony.x, z - quest.colony.z) < 9) continue;
         spots.push({ x: x + 0.5, z: z + 0.5 });
       }
     const pickSpots = (n, apart) => {
@@ -142,10 +178,21 @@ export function generateRealmWorld(seed) {
     if (kind === 'ember')
       for (let z = R.z0; z < R.z1; z++) for (let x = R.x0; x < R.x1; x++) if (tiles[idx(x, z)] === T.LAVA) lavaTiles.push({ x: x + 0.5, z: z + 0.5 });
     const props = {
-      frost: () => ({ snowmen: pickSpots(6, 8), penguins: pickSpots(7, 6) }),
+      frost: () => ({ snowmen: pickSpots(8, 10), penguins: pickSpots(8, 8) }),
       ember: () => ({ sprites: pickSpots(6, 8), bubbles: Array.from({ length: Math.min(14, lavaTiles.length) }, () => lavaTiles[rng.int(0, lavaTiles.length - 1)]) }),
       glimmer: () => ({ flowers: pickSpots(26, 3), butterflies: pickSpots(9, 6) }),
     }[kind]();
+
+    // where Mama Penguin's five lost chicks wandered off to: spread out, well away from home
+    if (quest) {
+      quest.chicks = [];
+      for (const apart of [16, 11, 7, 0])
+        for (let tries = 0; tries < 2000 && quest.chicks.length < 5; tries++) {
+          const s = spots[rng.int(0, spots.length - 1)];
+          if (Math.hypot(s.x - quest.colony.x, s.z - quest.colony.z) < 14) continue;
+          if (quest.chicks.every((o) => Math.hypot(o.x - s.x, o.z - s.z) >= apart)) quest.chicks.push(s);
+        }
+    }
 
     const [gx, gz] = along(CORE, c);
     return {
@@ -161,6 +208,7 @@ export function generateRealmWorld(seed) {
       nest: { x: cx + 0.5, z: cz + 0.5 },
       landmark: { what: L.what, x: lx + 0.5, z: lz + 0.5, r: L.r },
       props,
+      quest,
     };
   });
 

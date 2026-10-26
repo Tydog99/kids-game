@@ -35,6 +35,12 @@ between walking, rearing up and flying, and drag to look around.
   tree, and an ice castle. Snow, embers or sparkles fill the air in each land, with snowmen and
   penguins, lava bubbles and fire sprites, or crystal flowers and butterflies about. In Free Play
   all three lands are open.
+
+  **The Frozen Land's quests** (one after another): find Mama Penguin's five lost chicks, who
+  waddle after you in a line, and bring them home to her igloo; freeze the big lake with Frost's
+  ice breath for a penguin skating party (you can skate on it too); then fly up the snowy peak for
+  the Penguin King's lost crown. He makes you an honorary penguin, with a little crown of your
+  own.
   Grown-ups can skip ahead or start over from the settings panel.
 - **Free Play**: everything unlocked, with a slider for how many dragons roam the world.
 

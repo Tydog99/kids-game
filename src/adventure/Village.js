@@ -185,8 +185,8 @@ export class Village {
     const text = near ? (near.job.done ? near.job.spec.thanks : near.job.spec.want) : null;
     if (near && this.shown !== text && !this.heard.has(text) && !g.cutscene) this.say(near.job, text);
     else if (!near && this.shown) {
+      g.hud.hideSpeech(this.shown);
       this.shown = null;
-      g.hud.showSpeech(null);
     }
 
     for (const job of this.jobs) {

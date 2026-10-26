@@ -266,5 +266,53 @@
  "n_locked_frost": {
   "voice": "narrator",
   "text": "This way is closed. Make friends with Frost to open it!"
+ },
+ "mama_want": {
+  "voice": "mama",
+  "text": "Oh dear, oh dear! My five little chicks wandered off in the snow. Can you find them and bring them home?"
+ },
+ "mama_more": {
+  "voice": "mama",
+  "text": "You found some of my chicks! Please find the rest of them."
+ },
+ "mama_thanks": {
+  "voice": "mama",
+  "text": "My babies! All five are home! Thank you!"
+ },
+ "mama_skate": {
+  "voice": "mama",
+  "text": "Now let's have a skating party! Can Frost freeze the big lake for us?"
+ },
+ "mama_party": {
+  "voice": "mama",
+  "text": "Wheee! Look at us skate! Thank you, friend! The Penguin King at the ice castle wants to meet you."
+ },
+ "king_early": {
+  "voice": "king",
+  "text": "Hello, little traveler! Have you helped Mama Penguin yet?"
+ },
+ "king_want": {
+  "voice": "king",
+  "text": "Oh, woe! I lost my crown on top of the snowy peak. Only a flying dragon can reach it. Will you fetch it?"
+ },
+ "king_thanks": {
+  "voice": "king",
+  "text": "My crown! Thank you! I name you an honorary penguin! Here is a crown of your own!"
+ },
+ "king_after": {
+  "voice": "king",
+  "text": "Long live our honorary penguin!"
+ },
+ "n_chick": {
+  "voice": "narrator",
+  "text": "You found a penguin chick! It's following you!"
+ },
+ "n_lake": {
+  "voice": "narrator",
+  "text": "The lake is frozen! Let's skate!"
+ },
+ "n_crown": {
+  "voice": "narrator",
+  "text": "You got the crown! Take it back to the Penguin King."
  }
 }

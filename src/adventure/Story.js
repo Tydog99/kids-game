@@ -299,7 +299,7 @@ export class Story {
   }
 
   refresh() {
-    this.g.hud.showGoal(nextGoal(this.p));
+    this.g.setMainGoal(nextGoal(this.p));
   }
 
   // ---- hooks from the game ----
@@ -313,8 +313,8 @@ export class Story {
       this.set({ type: 'chestOpened' });
       // enjoy the treasure; then Ollie spots something else in the chest
       this.unboxing = UNBOXING;
+      this.g.hud.hideSpeech(this.speechShown);
       this.speechShown = null;
-      this.g.hud.showSpeech(null);
     }
   }
 
@@ -576,6 +576,7 @@ export class Story {
 
   reset() {
     save(this.key, '');
+    save(`frost:${this.g.world.seed}`, ''); // the Frozen Land's quests start over too
     save(this.g.namesKey, '{}');
     location.reload();
   }
@@ -590,8 +591,8 @@ export class Story {
     this.holdSpeech -= dt;
     if (this.g.cutscene && this.speechShown) {
       // out of the way while a dragon is shown
+      this.g.hud.hideSpeech(this.speechShown);
       this.speechShown = null;
-      this.g.hud.showSpeech(null);
     } else if (this.g.cutscene || this.unboxing !== null || this.holdSpeech > 0) {
       // quiet while the treasure pours out; then his line about the book stays up a while
     } else if ((near || this.intro > 0) && !this.g.riding) {
@@ -599,8 +600,8 @@ export class Story {
       const text = ollieSays(this.p);
       if (this.speechShown !== text && !this.heard.has(text)) this.say(text);
     } else if (this.speechShown) {
+      this.g.hud.hideSpeech(this.speechShown);
       this.speechShown = null;
-      this.g.hud.showSpeech(null);
     }
     this.celebrate = (this.celebrate ?? 0) - dt;
     this.ollie.cheering = (this.unboxing !== null && this.unboxing > UNBOXING - 5) || this.celebrate > 0;
