@@ -60,10 +60,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 }
 .title h1 span { color: var(--yellow); }
 .title .spacer { flex: 1; pointer-events: none; }
-.cards { display: flex; gap: clamp(40px, 14vw, 160px); }
-.looks { display: flex; gap: 8px; justify-content: center; margin-top: -4px; }
-.looks button { padding: 4px 14px; font-size: 17px; font-weight: 700; background: rgba(255, 250, 240, 0.85); }
-.looks .new-look { background: var(--yellow); }
+.looks { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: -4px; }
+.looks button { width: 54px; height: 48px; padding: 0; font-size: 24px; font-weight: 700; background: var(--yellow); }
+.looks .new-look { background: rgba(255, 250, 240, 0.9); }
+.look-num { min-width: 64px; text-align: center; font-weight: 700; font-size: 18px; color: #fff; text-shadow: 0 2px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink); }
 .modes { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .mode {
   padding: 8px 18px;
@@ -72,14 +72,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   background: rgba(255, 250, 240, 0.85);
 }
 .mode.selected { background: var(--yellow); }
-.card {
-  min-width: 120px;
-  padding: 10px 22px;
-  font-size: 26px;
-  font-weight: 700;
-  background: rgba(255, 250, 240, 0.85);
-}
-.card.selected { background: var(--yellow); }
 .seed-row { display: flex; align-items: center; gap: 8px; max-width: 100%; }
 .seed-row label { font-weight: 700; font-size: 20px; color: #fff; text-shadow: 0 2px 0 var(--ink); }
 .seed-row input {

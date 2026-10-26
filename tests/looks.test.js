@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { randomLook, parseLook } from '../src/voxel/models/looks.js';
+import { lookAt } from '../src/ui/TitleScreen.js';
 import { CHARACTERS, STYLES, STYLE_KEYS, buildCharacterParts } from '../src/voxel/models/characters.js';
 
 const STYLE_FOR = Object.fromEntries(Object.entries(STYLE_KEYS).map(([part, key]) => [key, STYLES[part]]));
@@ -47,5 +48,14 @@ describe('character looks', () => {
     expect(parseLook('{"hairStyle":"bun","topStyle":"cape","extra":"glasses"}')).toEqual({ hairStyle: 'bun', extra: 'glasses' });
     expect(parseLook('')).toBeNull();
     expect(parseLook('nope')).toBeNull();
+  });
+});
+
+describe('title screen look loop', () => {
+  it('starts with the original boy and girl, then gives the same mix every time', () => {
+    expect(lookAt(0)).toEqual({ id: 'boy', look: null });
+    expect(lookAt(1)).toEqual({ id: 'girl', look: null });
+    expect(lookAt(5)).toEqual(lookAt(5));
+    expect(lookAt(5).look).not.toEqual(lookAt(6).look);
   });
 });

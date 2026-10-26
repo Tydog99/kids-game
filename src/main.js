@@ -84,13 +84,17 @@ addEventListener('resize', () => {
   mode?.resize();
 });
 
-// On the title screen, Start (or A) on a game controller presses Play.
-let padWasDown = true;
+// On the title screen, Start (or A) on a game controller presses Play, and left/right (D-pad or
+// stick) step through the looks.
+let padWasDown = true, padWasSide = 0;
 function titleController() {
   const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
   const down = !!pad && [PAD_START, 1, 0].some((i) => pad.buttons[i]?.pressed);
   if (down && !padWasDown && mode instanceof TitleScreen) document.querySelector('.play')?.click();
   padWasDown = down;
+  const side = !pad ? 0 : pad.buttons[14]?.pressed || pad.axes[0] < -0.5 ? -1 : pad.buttons[15]?.pressed || pad.axes[0] > 0.5 ? 1 : 0;
+  if (side && side !== padWasSide && mode instanceof TitleScreen) mode.step(side);
+  padWasSide = side;
 }
 
 const clock = new THREE.Clock();
