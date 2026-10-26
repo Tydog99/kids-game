@@ -499,7 +499,8 @@ export class Story {
       showGems: !!q.accepted.glimmer && !q.quests.glimmer,
       showFlower: !!q.accepted.frost,
     }, night, this.g.player.character.root);
-    this.g.player.character.carrying = !!q.carrying;
+    // (or the Fire Mountains' dragon egg: lands/EmberQuest.js)
+    this.g.player.character.carrying = !!q.carrying || !!this.g.carryingOther;
   }
 
   // A beam of light over each item still to find, in its dragon's color.
@@ -576,7 +577,9 @@ export class Story {
 
   reset() {
     save(this.key, '');
-    save(`frost:${this.g.world.seed}`, ''); // the Frozen Land's quests start over too
+    // the dragon lands' quests (and the baby dragon) start over too
+    save(`frost:${this.g.world.seed}`, '');
+    save(`ember:${this.g.world.seed}`, '');
     save(this.g.namesKey, '{}');
     location.reload();
   }

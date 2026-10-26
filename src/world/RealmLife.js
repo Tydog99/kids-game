@@ -211,7 +211,7 @@ export function penguin() {
   return g;
 }
 
-function fireSprite() {
+export function fireSprite() {
   const g = new THREE.Group();
   g.add(mesh(new THREE.IcosahedronGeometry(0.28, 0), glow('#ffb030', 1)));
   const inner = mesh(new THREE.IcosahedronGeometry(0.16, 0), glow('#fff2a8', 1));

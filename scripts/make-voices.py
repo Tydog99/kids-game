@@ -37,6 +37,8 @@ VOICES = {
     'sam': ('en_US-libritts_r-medium', 1.08, 'anull', 400),  # Sculptor Sam: deep and calm
     # the Frozen Land's penguins
     'mama': ('en_US-libritts_r-medium', 0.95, 'asetrate=22050*1.12,aresample=22050,atempo=0.9', 150),  # Mama Penguin: warm and chirpy
+    # Flicker the fire sprite: small, quick and crackly-bright
+    'flicker': ('en_US-libritts_r-medium', 0.88, 'asetrate=22050*1.25,aresample=22050,atempo=0.85', 250),
     'king': ('en_US-libritts_r-medium', 1.1, 'asetrate=22050*0.9,aresample=22050,atempo=1.11,aecho=0.8:0.4:60:0.2', 3),  # the Penguin King: grand
 }
 

@@ -12,7 +12,7 @@ import { generateWorld, TREE_KIND, WORLD_SIZE } from './worldgen.js';
 import { walkDistances } from './treasure.js';
 
 export const CORE = WORLD_SIZE; // the usual world
-export const WORLD = 208; // the whole grid (a multiple of the renderer's 16-tile chunks)
+export const WORLD = 240; // the whole grid (a multiple of the renderer's 16-tile chunks)
 const CORRIDOR = 1; // tiles either side of the corridor's middle (so it's 3 wide)
 const NEST_CLEAR = 4; // open ground around the nest
 // each land's big centrepiece, on the far side of the nest from the corridor
@@ -21,7 +21,8 @@ export const ROCK_STYLE = { grey: 0, frost: 1, ember: 2, glimmer: 3 };
 
 export const REALM_KINDS = ['ember', 'glimmer', 'frost'];
 export const REALMS = {
-  ember: { name: 'the Fire Mountains', icon: '🔥', side: 'east', x0: 146, z0: 6, x1: 202, z1: 62, ground: T.VOLCANIC },
+  // the Fire Mountains are wider, for their quests (lands/emberQuest.js)
+  ember: { name: 'the Fire Mountains', icon: '🔥', side: 'east', x0: 146, z0: 6, x1: 236, z1: 62, ground: T.VOLCANIC },
   glimmer: { name: 'the Crystal Forest', icon: '💎', side: 'east', x0: 146, z0: 70, x1: 202, z1: 124, ground: T.CRYSTAL },
   // the Frozen Land is twice as wide, for its penguin quests (lands/frostQuest.js)
   frost: { name: 'the Frozen Land', icon: '❄️', side: 'south', x0: 8, z0: 146, x1: 120, z1: 202, ground: T.SNOW },
@@ -43,6 +44,7 @@ export function generateRealmWorld(seed) {
   const reachable = (x, z) => x >= 0 && z >= 0 && x < CORE && z < CORE && dist[z * CORE + x] >= 0;
   const rng = createRng(`${seed}:realms`);
   const heights = new Map(); // tile → rock height set by hand (the volcano, plinths)
+  const noLand = new Set(); // tiles dragons won't land on (the hot island in the Fire Mountains)
   const styles = new Map(); // tile → rock style set by hand
 
   const set = (x, z, t) => {
@@ -155,6 +157,35 @@ export function generateRealmWorld(seed) {
       };
     }
 
+    // 4c. the Fire Mountains' quest places: Flicker the fire sprite's hearth, and an island in a ring
+    // of lava (the moat) with a dragon egg on it. Dragons won't land on the hot island.
+    if (kind === 'ember') {
+      const hearth = { x: R.x0 + 18, z: cz + 13 };
+      for (let z = hearth.z - 5; z <= hearth.z + 5; z++) for (let x = hearth.x - 5; x <= hearth.x + 5; x++) if (Math.hypot(x - hearth.x, z - hearth.z) <= 5.2) set(x, z, R.ground);
+      for (let z = Math.min(c, hearth.z); z <= Math.max(c, hearth.z); z++) for (let d = -1; d <= 1; d++) open(hearth.x + d, z, R.ground);
+      const island = { x: R.x0 + 30, z: R.z0 + 13, r: 3, tiles: [] };
+      const moat = [];
+      for (let z = island.z - 10; z <= island.z + 10; z++)
+        for (let x = island.x - 10; x <= island.x + 10; x++) {
+          const d = Math.hypot(x - island.x, z - island.z);
+          if (d <= 3.2) {
+            set(x, z, R.ground);
+            island.tiles.push(idx(x, z));
+            noLand.add(idx(x, z));
+          } else if (d <= 7.2) {
+            set(x, z, T.LAVA);
+            moat.push(idx(x, z));
+          } else if (d <= 9.5) set(x, z, R.ground); // a shore all round
+        }
+      for (let z = island.z + 8; z <= c; z++) for (let d = -1; d <= 1; d++) open(island.x + d, z, R.ground);
+      quest = {
+        hearth: { x: hearth.x + 0.5, z: hearth.z + 0.5 },
+        island: { x: island.x + 0.5, z: island.z + 0.5, r: island.r, tiles: island.tiles },
+        moat,
+        crater: { x: lx + 0.5, z: lz + 0.5 },
+      };
+    }
+
     // 5. little things: snowmen and penguins, lava bubbles and fire sprites, crystal flowers and
     // butterflies, on open ground away from the nest, the landmark and the path
     const spots = [];
@@ -163,7 +194,8 @@ export function generateRealmWorld(seed) {
         if (tiles[idx(x, z)] !== R.ground) continue;
         if (Math.hypot(x - cx, z - cz) < NEST_CLEAR + 2 || Math.hypot(x - lx, z - lz) < L.r + 3) continue;
         if (Math.abs((east ? z : x) - c) <= CORRIDOR + 1) continue;
-        if (quest && Math.hypot(x - quest.colony.x, z - quest.colony.z) < 9) continue;
+        if (quest?.colony && Math.hypot(x - quest.colony.x, z - quest.colony.z) < 9) continue;
+        if (quest?.hearth && (Math.hypot(x - quest.hearth.x, z - quest.hearth.z) < 8 || Math.hypot(x - quest.island.x, z - quest.island.z) < 11)) continue;
         spots.push({ x: x + 0.5, z: z + 0.5 });
       }
     const pickSpots = (n, apart) => {
@@ -183,8 +215,18 @@ export function generateRealmWorld(seed) {
       glimmer: () => ({ flowers: pickSpots(26, 3), butterflies: pickSpots(9, 6) }),
     }[kind]();
 
+    // where Flicker's five sleepy fire sprites are: spread out, away from the hearth
+    if (quest?.hearth) {
+      quest.sprites = [];
+      for (const apart of [16, 11, 7, 0])
+        for (let tries = 0; tries < 2000 && quest.sprites.length < 5; tries++) {
+          const s = spots[rng.int(0, spots.length - 1)];
+          if (Math.hypot(s.x - quest.hearth.x, s.z - quest.hearth.z) < 12) continue;
+          if (quest.sprites.every((o) => Math.hypot(o.x - s.x, o.z - s.z) >= apart)) quest.sprites.push(s);
+        }
+    }
     // where Mama Penguin's five lost chicks wandered off to: spread out, well away from home
-    if (quest) {
+    if (quest?.colony) {
       quest.chicks = [];
       for (const apart of [16, 11, 7, 0])
         for (let tries = 0; tries < 2000 && quest.chicks.length < 5; tries++) {
@@ -255,7 +297,7 @@ export function generateRealmWorld(seed) {
   for (let z = 0; z < W; z++)
     for (let x = 0; x < W; x++) if ((x >= CORE || z >= CORE) && tiles[idx(x, z)] === T.TREE) objects.push({ type: 'tree', kind: treeKind[idx(x, z)], x, z, variant: rng.int(0, 1000) });
 
-  return { ...core, width: W, height: W, tiles, treeKind, objects, core: CORE, realms, rockHeight, rockStyle };
+  return { ...core, width: W, height: W, tiles, treeKind, objects, core: CORE, realms, rockHeight, rockStyle, noLand };
 
   function paint(kind, x, z, n1, n2) {
     const e = n1(x / 13, z / 13), s = n2(x / 7, z / 7);

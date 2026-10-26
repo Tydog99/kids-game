@@ -37,7 +37,7 @@
  },
  "n_egg": {
   "voice": "narrator",
-  "text": "You found Ember's egg! Carry it back to Ember."
+  "text": "You found a warm dragon egg! Take it up to the volcano's crater."
  },
  "n_gem1": {
   "voice": "narrator",
@@ -314,5 +314,53 @@
  "n_crown": {
   "voice": "narrator",
   "text": "You got the crown! Take it back to the Penguin King."
+ },
+ "flicker_want": {
+  "voice": "flicker",
+  "text": "Oh no! My fire sprite friends have gone cold and sleepy. Can Ember breathe fire to warm them up?"
+ },
+ "flicker_more": {
+  "voice": "flicker",
+  "text": "You warmed some of my friends! Please find the others. They look grey and sleepy."
+ },
+ "flicker_thanks": {
+  "voice": "flicker",
+  "text": "Hooray! We're all warm again! Let's dance!"
+ },
+ "flicker_river": {
+  "voice": "flicker",
+  "text": "I have a secret treasure on the island in the lava river. Dragons can't land there, it's too hot! Can Frost make stepping stones?"
+ },
+ "flicker_egg": {
+  "voice": "flicker",
+  "text": "You found it! That is a fire dragon egg. It needs the heat of the volcano to hatch. Fly it up to the crater!"
+ },
+ "flicker_done": {
+  "voice": "flicker",
+  "text": "Your baby dragon is so cute! Come and dance with us any time!"
+ },
+ "n_sprite": {
+  "voice": "narrator",
+  "text": "You warmed up a fire sprite!"
+ },
+ "n_egg_set": {
+  "voice": "narrator",
+  "text": "Now breathe fire on the egg with Ember!"
+ },
+ "n_hatch": {
+  "voice": "narrator",
+  "text": "The egg is hatching! It's a baby dragon!"
+ },
+ "n_sprite_wrong": {
+  "voice": "narrator",
+  "text": "Brrr! Sleepy sprites need Ember's fire!"
+ },
+ "n_egg_fire": {
+  "voice": "narrator",
+  "text": "Breathe fire on the egg with Ember!"
+ },
+ "n_sprites_first": {
+  "voice": "narrator",
+  "text": "Help Flicker warm up the fire sprites first!"
  }
 }

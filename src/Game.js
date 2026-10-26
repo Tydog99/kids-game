@@ -5,6 +5,7 @@ import { generateRealmWorld, realmAt, REALM_KINDS } from './realms.js';
 import { RealmView } from './world/RealmView.js';
 import { RealmLife } from './world/RealmLife.js';
 import { FrostQuest } from './lands/FrostQuest.js';
+import { EmberQuest } from './lands/EmberQuest.js';
 import { speakLine } from './ui/speak.js';
 import { T } from './tiles.js';
 import { WorldRenderer } from './world/WorldRenderer.js';
@@ -135,7 +136,7 @@ export class Game {
       /* ignore a corrupt save */
     }
     this.dragons.setNames(names);
-    this.player.motor.obstacles = () => (this.riding ? [] : [...this.dragons.obstacles(), ...(this.story ? this.story.obstacles() : []), ...(this.frostQuest?.obstacles ?? [])]);
+    this.player.motor.obstacles = () => (this.riding ? [] : [...this.dragons.obstacles(), ...(this.story ? this.story.obstacles() : []), ...(this.landQuests ?? []).flatMap((q) => q.obstacles)]);
     this.riding = null; // the WorldDragon being ridden
     this.inArena = false; // riding at the Sky Pitch, off the edge of the map (see race/Race.js)
     this.naming = false; // the dragon-naming box is open
@@ -158,8 +159,11 @@ export class Game {
       this.story = new Story(this);
     }
     // the quests in the dragon lands
-    const frost = this.world.realms?.find((r) => r.kind === 'frost');
-    if (frost?.quest) this.frostQuest = new FrostQuest(this, frost, { nag: (text) => (this.story ? this.story.nag(text) : this.hud.showBanner(text, true)) });
+    const nag = (text) => (this.story ? this.story.nag(text) : this.hud.showBanner(text, true));
+    const land = (kind) => this.world.realms?.find((r) => r.kind === kind && r.quest);
+    this.landQuests = [];
+    if (land('frost')) this.landQuests.push((this.frostQuest = new FrostQuest(this, land('frost'), { nag })));
+    if (land('ember')) this.landQuests.push((this.emberQuest = new EmberQuest(this, land('ember'), { nag })));
     // skating: the player slides about on ice
     this.player.motor.onIce = (x, z) => tileAt(this.world, Math.floor(x), Math.floor(z)) === T.ICE;
 
@@ -317,6 +321,8 @@ export class Game {
     // a dragon land can't be flown into until its gate is open
     const land = realmAt(w, tx, tz);
     if (land && !land.open) return { top: 99, land: false };
+    // the hot island in the Fire Mountains: dragons can fly over it but won't land there
+    if (w.noLand?.has(tz * w.width + tx)) return { top: GROUND_Y, land: false };
     if (this.walkable(tx, tz) === true) return { top: GROUND_Y, land: true };
     if (tx < 0 || tz < 0 || tx >= w.width || tz >= w.height) return { top: 99, land: false };
     if (tz * w.width + tx === this.chestTile) return { top: 1.4, land: false };
@@ -528,7 +534,7 @@ export class Game {
     this.updateTrust(dt);
     this.realms.update(dt, t, this.playerInfo());
     this.realmLife.update(dt, t, this.playerInfo());
-    this.frostQuest?.update(dt, t);
+    for (const q of this.landQuests) q.update(dt, t);
     this.refreshMyDragons();
     if (this.riding) {
       const d = this.riding;
@@ -556,7 +562,7 @@ export class Game {
 
   // Someone close enough to talk to with E: { name, talk() }, or null.
   talker() {
-    return this.story?.talker() ?? this.frostQuest?.talker() ?? null;
+    return this.story?.talker() ?? this.landQuests.map((q) => q.talker()).find(Boolean) ?? null;
   }
 
   // The quest box shows the story's goal, or a land's own quest while you're in that land.
@@ -565,7 +571,8 @@ export class Game {
   }
 
   updateGoal() {
-    const goal = this.frostQuest?.goalHere(this.playerInfo()) ?? this.mainGoal ?? null;
+    const p = this.playerInfo();
+    const goal = this.landQuests.map((q) => q.goalHere(p)).find(Boolean) ?? this.mainGoal ?? null;
     const key = goal ? goal.icon + goal.text : '';
     if (key === this.goalShown) return;
     this.goalShown = key;
@@ -574,7 +581,8 @@ export class Game {
 
   // The quest compass: which way (from where the camera looks) to the quest's target, and how far.
   updateCompass() {
-    const target = this.frostQuest?.target(this.playerInfo()) ?? this.story?.compassTarget();
+    const p0 = this.playerInfo();
+    const target = this.landQuests.map((q) => q.target(p0)).find(Boolean) ?? this.story?.compassTarget();
     if (!target) return this.hud.showCompass(null);
     const p = this.playerInfo();
     const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz);
@@ -667,7 +675,7 @@ export class Game {
     this.dayCycle.dispose();
     this.realms.dispose();
     this.realmLife.dispose();
-    this.frostQuest?.dispose();
+    for (const q of this.landQuests) q.dispose();
     this.hud.dispose();
     this.worldView.dispose();
     this.envView.dispose();
