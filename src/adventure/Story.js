@@ -96,6 +96,43 @@ export class Story {
     if (this.p.chapter === 'village' || this.p.chapter === 'done') this.startVillage();
   }
 
+  // Where the quest compass points: the thing the next goal is about, or null.
+  compassTarget() {
+    const p = this.p, g = this.g;
+    if (g.inArena) return null;
+    const me = g.playerInfo();
+    const nearest = (list) => {
+      let best = null;
+      for (const t of list) if (t && (!best || Math.hypot(t.x - me.x, t.z - me.z) < Math.hypot(best.x - me.x, best.z - me.z))) best = t;
+      return best;
+    };
+    const tile = (t) => t && { x: t.x + 0.5, z: t.z + 0.5 };
+    const dragon = (kind) => g.dragons.list.find((d) => d.kind === kind);
+    if (p.chapter === 'treasure') {
+      if (p.keys.length < 3) return nearest(g.hunt.keys.filter((k) => !k.collected).map(tile));
+      return tile(g.hunt.chest);
+    }
+    if (p.chapter === 'dragons') {
+      if (!p.hasBook) return this.book.spot ?? tile(g.hunt.chest);
+      if (!p.landed) return null;
+      if (p.carrying === 'egg') return dragon('ember');
+      if (p.carrying === 'flower') return dragon('frost');
+      if (p.accepted.glimmer && !p.quests.glimmer && p.gems.length >= 5) return dragon('glimmer');
+      const ready = REVEAL_ORDER.find((k) => p.quests[k] && !p.friends[k]);
+      if (ready) return dragon(ready);
+      const wants = [];
+      if (p.accepted.ember && !p.egg) wants.push(tile(this.items.egg));
+      if (p.accepted.glimmer && !p.quests.glimmer) wants.push(...this.items.gems.filter((_, i) => !p.gems.includes(i)).map(tile));
+      if (p.accepted.frost && !p.flower) wants.push(tile(this.items.flower));
+      if (wants.length) return nearest(wants);
+      return nearest(g.dragons.list.filter((d) => !d.trusted && !p.accepted[d.kind]));
+    }
+    if (p.chapter === 'race') return this.race ? { x: this.race.ringAt.x, z: this.race.ringAt.z } : null;
+    if (p.chapter === 'village') return nearest(this.village?.jobs.filter((j) => !j.done).map((j) => ({ x: j.person.x, z: j.person.z })) ?? []);
+    // all done: any dragon nest not found yet
+    return nearest((g.world.realms ?? []).filter((r) => r.open && !p.nests[r.kind]).map((r) => r.nest));
+  }
+
   // Things the player can't walk through: Ollie, and the villagers and their things.
   obstacles() {
     return [this.ollie.obstacle, ...(this.village?.obstacles ?? [])];

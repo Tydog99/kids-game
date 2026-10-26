@@ -307,7 +307,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   top: 14px;
   left: 14px;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 2px 8px;
   max-width: min(360px, calc(100vw - 200px));
@@ -322,6 +322,21 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 }
 .goal[hidden], .speech[hidden], .book-btn[hidden] { display: none; }
 .goal-icon { font-size: 24px; }
+.compass { display: grid; justify-items: center; width: 46px; }
+.compass[hidden] { display: none; }
+.compass .needle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: #ffd23f;
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.15s linear;
+}
+.compass small { font-size: 11px; font-weight: 700; white-space: nowrap; }
 .goal-head { grid-column: 1 / -1; margin: 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #6a5a2a; }
 .speech {
   position: absolute;

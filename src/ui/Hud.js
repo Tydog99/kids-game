@@ -16,7 +16,7 @@ export class Hud {
       </div>
       <div class="banner"></div>
       <div class="keys" hidden></div>
-      <div class="goal" hidden aria-live="polite"><h2 class="goal-head">Quests</h2><span class="goal-icon"></span><span class="goal-text"></span></div>
+      <div class="goal" hidden aria-live="polite"><h2 class="goal-head">Quests</h2><span class="goal-icon"></span><span class="goal-text"></span><span class="compass" hidden aria-hidden="true"><span class="needle">➤</span><small></small></span></div>
       <div class="speech" hidden aria-live="polite"><b class="speech-who"></b><span class="speech-text"></span><button type="button" class="speech-read" aria-label="Read out loud">🔊</button></div>
       <div class="daypanel">
         <div class="setting">
@@ -174,6 +174,19 @@ export class Hud {
     if (!goal) return;
     g.querySelector('.goal-icon').textContent = goal.icon;
     g.querySelector('.goal-text').textContent = goal.text;
+  }
+
+  // The quest compass: angle (radians, 0 = straight ahead, clockwise) to the quest's target and a
+  // word for how far it is; null hides it.
+  showCompass(c) {
+    const el = this.el.querySelector('.compass');
+    el.hidden = !c;
+    if (!c) return;
+    const needle = el.querySelector('.needle');
+    const here = c.word === 'here!';
+    needle.textContent = here ? '✨' : '➤';
+    needle.style.transform = here ? 'none' : `rotate(${c.angle - Math.PI / 2}rad)`;
+    el.querySelector('small').textContent = c.word;
   }
 
   // A villager's speech box with a read-aloud button; null hides it.

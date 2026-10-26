@@ -536,7 +536,22 @@ export class Game {
       else if (this.currentTown) this.hud.showBanner('Route');
       this.currentTown = town;
     }
+    this.updateCompass();
     this.hud.update();
+  }
+
+  // The quest compass: which way (from where the camera looks) to the quest's target, and how far.
+  updateCompass() {
+    const target = this.story?.compassTarget();
+    if (!target) return this.hud.showCompass(null);
+    const p = this.playerInfo();
+    const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz);
+    const f = this.camera.getWorldDirection(this.tmpDir ?? (this.tmpDir = new THREE.Vector3()));
+    const fl = Math.hypot(f.x, f.z) || 1;
+    const fx = f.x / fl, fz = f.z / fl;
+    const angle = Math.atan2(dz * fx - dx * fz, dx * fx + dz * fz);
+    const word = d < 3 ? 'here!' : d < 12 ? 'close' : d < 45 ? 'far' : 'very far';
+    this.hud.showCompass({ angle, word });
   }
 
   // The controls hint at the bottom, for the keyboard or the game controller.
