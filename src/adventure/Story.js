@@ -580,6 +580,7 @@ export class Story {
     // the dragon lands' quests (and the baby dragon) start over too
     save(`frost:${this.g.world.seed}`, '');
     save(`ember:${this.g.world.seed}`, '');
+    save(`glimmer:${this.g.world.seed}`, '');
     save(this.g.namesKey, '{}');
     location.reload();
   }

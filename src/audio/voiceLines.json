@@ -362,5 +362,53 @@
  "n_sprites_first": {
   "voice": "narrator",
   "text": "Help Flicker warm up the fire sprites first!"
+ },
+ "luna_want": {
+  "voice": "luna",
+  "text": "Hello, friend! My crystals have gone dull and grey. Can Glimmer breathe her sparkly diamonds on them to make them shine?"
+ },
+ "luna_more": {
+  "voice": "luna",
+  "text": "They are starting to shine! Please find the other dull crystals."
+ },
+ "luna_song": {
+  "voice": "luna",
+  "text": "My forest sparkles again! Now come to the song glade. Watch the singing crystals light up, then walk to them in the same order."
+ },
+ "luna_oops": {
+  "voice": "luna",
+  "text": "Oops! Watch the lights and try again."
+ },
+ "luna_star": {
+  "voice": "luna",
+  "text": "What a beautiful song! Here is the star crystal. Fly it up to the very top of the giant crystal tree!"
+ },
+ "luna_done": {
+  "voice": "luna",
+  "text": "The whole forest is glowing! Thank you! Now you leave rainbow sparkles wherever you go!"
+ },
+ "n_crystal": {
+  "voice": "narrator",
+  "text": "You made a crystal shine!"
+ },
+ "n_crystals": {
+  "voice": "narrator",
+  "text": "All the crystals shine! Now go to the song glade."
+ },
+ "n_song_how": {
+  "voice": "narrator",
+  "text": "Watch the crystals light up, then walk to them in the same order!"
+ },
+ "n_song": {
+  "voice": "narrator",
+  "text": "You sang the crystal song!"
+ },
+ "n_star": {
+  "voice": "narrator",
+  "text": "The star is on the tree! The whole forest is glowing!"
+ },
+ "n_crystal_wrong": {
+  "voice": "narrator",
+  "text": "Dull crystals need sparkly diamonds! Glimmer breathes diamonds."
  }
 }

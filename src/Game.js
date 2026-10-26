@@ -6,6 +6,7 @@ import { RealmView } from './world/RealmView.js';
 import { RealmLife } from './world/RealmLife.js';
 import { FrostQuest } from './lands/FrostQuest.js';
 import { EmberQuest } from './lands/EmberQuest.js';
+import { GlimmerQuest } from './lands/GlimmerQuest.js';
 import { speakLine } from './ui/speak.js';
 import { T } from './tiles.js';
 import { WorldRenderer } from './world/WorldRenderer.js';
@@ -164,6 +165,7 @@ export class Game {
     this.landQuests = [];
     if (land('frost')) this.landQuests.push((this.frostQuest = new FrostQuest(this, land('frost'), { nag })));
     if (land('ember')) this.landQuests.push((this.emberQuest = new EmberQuest(this, land('ember'), { nag })));
+    if (land('glimmer')) this.landQuests.push((this.glimmerQuest = new GlimmerQuest(this, land('glimmer'), { nag })));
     // skating: the player slides about on ice
     this.player.motor.onIce = (x, z) => tileAt(this.world, Math.floor(x), Math.floor(z)) === T.ICE;
 

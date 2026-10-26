@@ -46,6 +46,12 @@ between walking, rearing up and flying, and drag to look around.
   Ember's fire; cool the lava river round Flicker's island into stepping stones with Frost's ice and
   walk across for the warm dragon egg; then fly it up to the volcano's crater and breathe fire on
   it with Ember. It hatches into a baby dragon you name, who follows you everywhere.
+
+  **The Crystal Forest's quests**: Luna the crystal unicorn's crystals have gone dull; make five of
+  them shine with Glimmer's diamonds. In the song glade, the singing crystals light up one by one
+  to show a tune: walk into them in the same order to sing it back. Then Luna gives you the star
+  crystal to fly up to the top of the giant crystal tree: the forest glows, a rainbow appears, and
+  you leave rainbow sparkles wherever you go.
   Grown-ups can skip ahead or start over from the settings panel.
 - **Free Play**: everything unlocked, with a slider for how many dragons roam the world.
 

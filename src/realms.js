@@ -10,6 +10,7 @@ import { createRng } from './rng.js';
 import { T, isWalkableTile } from './tiles.js';
 import { generateWorld, TREE_KIND, WORLD_SIZE } from './worldgen.js';
 import { walkDistances } from './treasure.js';
+import { crystalTree } from './voxel/models/trees.js';
 
 export const CORE = WORLD_SIZE; // the usual world
 export const WORLD = 240; // the whole grid (a multiple of the renderer's 16-tile chunks)
@@ -23,7 +24,8 @@ export const REALM_KINDS = ['ember', 'glimmer', 'frost'];
 export const REALMS = {
   // the Fire Mountains are wider, for their quests (lands/emberQuest.js)
   ember: { name: 'the Fire Mountains', icon: '🔥', side: 'east', x0: 146, z0: 6, x1: 236, z1: 62, ground: T.VOLCANIC },
-  glimmer: { name: 'the Crystal Forest', icon: '💎', side: 'east', x0: 146, z0: 70, x1: 202, z1: 124, ground: T.CRYSTAL },
+  // the Crystal Forest is wider too, for its quests (lands/glimmerQuest.js)
+  glimmer: { name: 'the Crystal Forest', icon: '💎', side: 'east', x0: 146, z0: 70, x1: 236, z1: 124, ground: T.CRYSTAL },
   // the Frozen Land is twice as wide, for its penguin quests (lands/frostQuest.js)
   frost: { name: 'the Frozen Land', icon: '❄️', side: 'south', x0: 8, z0: 146, x1: 120, z1: 202, ground: T.SNOW },
 };
@@ -186,15 +188,52 @@ export function generateRealmWorld(seed) {
       };
     }
 
+    // 4d. the Crystal Forest's quest places: Luna the unicorn's glade, the song glade with its ring of
+    // singing crystals, and the top of the giant crystal tree (the landmark)
+    if (kind === 'glimmer') {
+      const glade = { x: R.x0 + 18, z: cz - 14 }, song = { x: R.x0 + 30, z: cz + 15 };
+      for (const [g, r] of [[glade, 5], [song, 6]]) {
+        for (let z = g.z - r; z <= g.z + r; z++) for (let x = g.x - r; x <= g.x + r; x++) if (Math.hypot(x - g.x, z - g.z) <= r + 0.3) set(x, z, R.ground);
+        for (let z = Math.min(c, g.z); z <= Math.max(c, g.z); z++) for (let d = -1; d <= 1; d++) open(g.x + d, z, R.ground);
+      }
+      const b = crystalTree(7).bounds();
+      quest = {
+        glade: { x: glade.x + 0.5, z: glade.z + 0.5 },
+        song: { x: song.x + 0.5, z: song.z + 0.5 },
+        pillars: [0, 1, 2, 3, 4].map((i) => {
+          const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+          return { x: song.x + 0.5 + Math.cos(a) * 3.6, z: song.z + 0.5 + Math.sin(a) * 3.6 };
+        }),
+        // the tune Luna hums: which crystal sings, in order
+        tune: [0, 1, 2, 3].reduce((t) => [...t, (t.length ? t[t.length - 1] + rng.int(1, 4) : rng.int(0, 4)) % 5], []), // never the same note twice in a row
+        // the giant crystal tree (RealmLife scales its model by 5.2) and the top where the star goes
+        tree: { x: lx + 0.5, z: lz + 0.5, top: 0.25 + ((b.maxY + 1) / 8) * 5.2 },
+      };
+    }
+
     // 5. little things: snowmen and penguins, lava bubbles and fire sprites, crystal flowers and
     // butterflies, on open ground away from the nest, the landmark and the path
+    // (only ground that can be walked to from the nest: not a pocket walled in by trees or rock)
+    const reach = new Uint8Array(W * W);
+    const todo = [idx(cx, cz)];
+    reach[todo[0]] = 1;
+    for (let h = 0; h < todo.length; h++) {
+      const i = todo[h], x = i % W, z = (i / W) | 0;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, nz = z + dz, ni = idx(nx, nz);
+        if (nx < R.x0 || nz < R.z0 || nx >= R.x1 || nz >= R.z1 || reach[ni] || !isWalkableTile(tiles[ni])) continue;
+        reach[ni] = 1;
+        todo.push(ni);
+      }
+    }
     const spots = [];
     for (let z = R.z0 + 3; z < R.z1 - 3; z++)
       for (let x = R.x0 + 3; x < R.x1 - 3; x++) {
-        if (tiles[idx(x, z)] !== R.ground) continue;
+        if (tiles[idx(x, z)] !== R.ground || !reach[idx(x, z)]) continue;
         if (Math.hypot(x - cx, z - cz) < NEST_CLEAR + 2 || Math.hypot(x - lx, z - lz) < L.r + 3) continue;
         if (Math.abs((east ? z : x) - c) <= CORRIDOR + 1) continue;
         if (quest?.colony && Math.hypot(x - quest.colony.x, z - quest.colony.z) < 9) continue;
+        if (quest?.glade && (Math.hypot(x - quest.glade.x, z - quest.glade.z) < 8 || Math.hypot(x - quest.song.x, z - quest.song.z) < 9)) continue;
         if (quest?.hearth && (Math.hypot(x - quest.hearth.x, z - quest.hearth.z) < 8 || Math.hypot(x - quest.island.x, z - quest.island.z) < 11)) continue;
         spots.push({ x: x + 0.5, z: z + 0.5 });
       }
@@ -215,6 +254,16 @@ export function generateRealmWorld(seed) {
       glimmer: () => ({ flowers: pickSpots(26, 3), butterflies: pickSpots(9, 6) }),
     }[kind]();
 
+    // where the five dull crystals are: spread out, away from the glades
+    if (quest?.glade) {
+      quest.crystals = [];
+      for (const apart of [16, 11, 7, 0])
+        for (let tries = 0; tries < 2000 && quest.crystals.length < 5; tries++) {
+          const s = spots[rng.int(0, spots.length - 1)];
+          if (Math.hypot(s.x - quest.glade.x, s.z - quest.glade.z) < 10 || Math.hypot(s.x - quest.song.x, s.z - quest.song.z) < 10) continue;
+          if (quest.crystals.every((o) => Math.hypot(o.x - s.x, o.z - s.z) >= apart)) quest.crystals.push(s);
+        }
+    }
     // where Flicker's five sleepy fire sprites are: spread out, away from the hearth
     if (quest?.hearth) {
       quest.sprites = [];
