@@ -31,7 +31,10 @@ between walking, rearing up and flying, and drag to look around.
   Each dragon you befriend opens a corridor through the mountains at the edge of the map to its
   own land: Ember's **Fire Mountains** (lava and rock spires), Glimmer's **Crystal Forest** and
   Frost's **Frozen Land** (snowy pines and frozen ponds). Each land has the dragon's nest, full of
-  eggs, at its heart. In Free Play all three lands are open.
+  eggs, at its heart, and a landmark: a smoking volcano with a lava crater, a giant glowing crystal
+  tree, and an ice castle. Snow, embers or sparkles fill the air in each land, with snowmen and
+  penguins, lava bubbles and fire sprites, or crystal flowers and butterflies about. In Free Play
+  all three lands are open.
   Grown-ups can skip ahead or start over from the settings panel.
 - **Free Play**: everything unlocked, with a slider for how many dragons roam the world.
 

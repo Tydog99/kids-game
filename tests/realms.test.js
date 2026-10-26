@@ -81,3 +81,37 @@ describe('dragon lands', () => {
     }
   });
 });
+
+describe('dragon land looks', () => {
+  const world = generateRealmWorld('maple-fern-42');
+  it('mountains rise away from open ground', () => {
+    let low = 0, high = 0;
+    for (let i = 0; i < world.tiles.length; i++) {
+      if (world.tiles[i] !== T.ROCK) continue;
+      expect(world.rockHeight[i]).toBeGreaterThan(0.3);
+      if (world.rockHeight[i] < 3) low++;
+      if (world.rockHeight[i] > 6) high++;
+    }
+    expect(low).toBeGreaterThan(100);
+    expect(high).toBeGreaterThan(100);
+  });
+
+  it('each land has its landmark (clear of the nest) and its critters on open ground', () => {
+    for (const r of world.realms) {
+      const L = r.landmark;
+      expect(world.tiles[Math.floor(L.z) * WORLD + Math.floor(L.x)]).toBe(T.ROCK);
+      expect(Math.hypot(L.x - r.nest.x, L.z - r.nest.z)).toBeGreaterThan(L.r + 5);
+      const spots = Object.values(r.props).flat();
+      expect(spots.length).toBeGreaterThan(8);
+      for (const s of spots) {
+        expect(realmAt(world, Math.floor(s.x), Math.floor(s.z))).toBe(r);
+        const t = world.tiles[Math.floor(s.z) * WORLD + Math.floor(s.x)];
+        expect(r.kind === 'ember' ? [T.VOLCANIC, T.LAVA] : [r.ground]).toContain(t);
+      }
+    }
+    const volcano = world.realms.find((r) => r.kind === 'ember').landmark;
+    const at = (dx) => world.rockHeight[Math.floor(volcano.z) * WORLD + Math.floor(volcano.x) + dx];
+    expect(at(3)).toBeGreaterThan(at(6)); // slopes up toward the top…
+    expect(at(0)).toBeLessThan(at(2)); // …with a crater in it
+  });
+});

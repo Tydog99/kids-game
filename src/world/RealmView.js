@@ -78,11 +78,8 @@ export class RealmView {
     const curtain = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 4.8), gateCurtain(COLOUR[r.kind]));
     curtain.position.y = 2.4;
     g.add(curtain);
-    const light = new THREE.PointLight(COLOUR[r.kind], 1.5, 8, 1.5);
-    light.position.y = 2.5;
-    g.add(light);
     this.group.add(g);
-    return { group: g, curtain, light, gem, opening: null };
+    return { group: g, curtain, gem, opening: null };
   }
 
   buildNest(r) {
@@ -122,9 +119,6 @@ export class RealmView {
       g.add(egg);
       return egg;
     });
-    const light = new THREE.PointLight(COLOUR[r.kind], 2, 7, 1.5);
-    light.position.y = 1.5;
-    g.add(light);
     g.scale.setScalar(1.3);
     this.group.add(g);
     return { group: g, eggs };
@@ -154,7 +148,7 @@ export class RealmView {
         gate.opening += dt;
         const k = Math.min(1, gate.opening / 2.2);
         gate.curtain.material.uniforms.uFade.value = 1 - k;
-        gate.light.intensity = 1.5 + Math.sin(k * Math.PI) * 4;
+        gate.gem.scale.setScalar(1 + Math.sin(k * Math.PI) * 1.5);
         gate.group.position.y = GROUND - Math.max(0, k - 0.4) * 9;
         if (k >= 1) gate.group.visible = false;
         continue;

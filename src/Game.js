@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { isWalkable, tileAt, TREE_KIND, TOWN_HALF, DIRS } from './worldgen.js';
 import { generateRealmWorld, realmAt, REALM_KINDS } from './realms.js';
 import { RealmView } from './world/RealmView.js';
+import { RealmLife } from './world/RealmLife.js';
 import { speakLine } from './ui/speak.js';
 import { T } from './tiles.js';
 import { WorldRenderer } from './world/WorldRenderer.js';
@@ -147,6 +148,8 @@ export class Game {
       onNest: (kind) => (this.story ? this.story.onNest(kind) : this.foundNest(kind)),
     });
     if (mode !== 'adventure') for (const kind of REALM_KINDS) this.realms.unlock(kind, false);
+    // their landmarks, critters and weather
+    this.realmLife = new RealmLife(this.scene, this.skyScene, this.world);
 
     if (this.hunt) {
       this.treasureView = new TreasureView(this.scene, this.hunt);
@@ -311,7 +314,9 @@ export class Game {
     if (this.walkable(tx, tz) === true) return { top: GROUND_Y, land: true };
     if (tx < 0 || tz < 0 || tx >= w.width || tz >= w.height) return { top: 99, land: false };
     if (tz * w.width + tx === this.chestTile) return { top: 1.4, land: false };
-    return { top: TILE_TOP[tileAt(w, tx, tz)] ?? 3.8, land: false };
+    const t = tileAt(w, tx, tz);
+    if (t === T.ROCK) return { top: (w.rockHeight?.[tz * w.width + tx] || 4.5) + 0.4, land: false };
+    return { top: TILE_TOP[t] ?? 3.8, land: false };
   }
 
   // Is a grounded dragon (other than the one being ridden) standing at this point?
@@ -516,6 +521,7 @@ export class Game {
     this.envView.update(dt, this.env.burning);
     this.updateTrust(dt);
     this.realms.update(dt, t, this.playerInfo());
+    this.realmLife.update(dt, t, this.playerInfo());
     this.refreshMyDragons();
     if (this.riding) {
       const d = this.riding;
@@ -634,6 +640,7 @@ export class Game {
     this.treasureView?.dispose();
     this.dayCycle.dispose();
     this.realms.dispose();
+    this.realmLife.dispose();
     this.hud.dispose();
     this.worldView.dispose();
     this.envView.dispose();

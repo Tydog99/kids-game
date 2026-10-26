@@ -15,6 +15,9 @@ export const CORE = WORLD_SIZE; // the usual world
 export const WORLD = 208; // the whole grid (a multiple of the renderer's 16-tile chunks)
 const CORRIDOR = 1; // tiles either side of the corridor's middle (so it's 3 wide)
 const NEST_CLEAR = 4; // open ground around the nest
+// each land's big centrepiece, on the far side of the nest from the corridor
+const LANDMARK = { ember: { what: 'volcano', r: 7 }, glimmer: { what: 'crystalTree', r: 3 }, frost: { what: 'iceCastle', r: 5 } };
+export const ROCK_STYLE = { grey: 0, frost: 1, ember: 2, glimmer: 3 };
 
 export const REALM_KINDS = ['ember', 'glimmer', 'frost'];
 export const REALMS = {
@@ -38,6 +41,8 @@ export function generateRealmWorld(seed) {
   const dist = walkDistances(core, core.spawn.x, core.spawn.z);
   const reachable = (x, z) => x >= 0 && z >= 0 && x < CORE && z < CORE && dist[z * CORE + x] >= 0;
   const rng = createRng(`${seed}:realms`);
+  const heights = new Map(); // tile → rock height set by hand (the volcano, plinths)
+  const styles = new Map(); // tile → rock style set by hand
 
   const set = (x, z, t) => {
     tiles[idx(x, z)] = t;
@@ -100,6 +105,48 @@ export function generateRealmWorld(seed) {
     for (let z = cz - NEST_CLEAR; z <= cz + NEST_CLEAR; z++)
       for (let x = cx - NEST_CLEAR; x <= cx + NEST_CLEAR; x++) if (Math.hypot(x - cx, z - cz) <= NEST_CLEAR + 0.5) set(x, z, R.ground);
 
+    // 4. the landmark: a clearing with the landmark's own ground in the middle
+    const L = LANDMARK[kind];
+    const lx = east ? cx + 15 : cx, lz = east ? cz : cz + 15;
+    for (let z = lz - L.r - 2; z <= lz + L.r + 2; z++)
+      for (let x = lx - L.r - 2; x <= lx + L.r + 2; x++) {
+        const d = Math.hypot(x - lx, z - lz);
+        if (d <= L.r) {
+          set(x, z, T.ROCK);
+          // the volcano rises to a crater; the others stand on a low plinth
+          if (L.what === 'volcano') heights.set(idx(x, z), d < 1.6 ? 6.2 : 2 + (L.r - d) * 1.25);
+          else heights.set(idx(x, z), 0.45);
+          styles.set(idx(x, z), ROCK_STYLE[kind]);
+        } else if (d <= L.r + 2) set(x, z, R.ground);
+      }
+
+    // 5. little things: snowmen and penguins, lava bubbles and fire sprites, crystal flowers and
+    // butterflies, on open ground away from the nest, the landmark and the path
+    const spots = [];
+    for (let z = R.z0 + 3; z < R.z1 - 3; z++)
+      for (let x = R.x0 + 3; x < R.x1 - 3; x++) {
+        if (tiles[idx(x, z)] !== R.ground) continue;
+        if (Math.hypot(x - cx, z - cz) < NEST_CLEAR + 2 || Math.hypot(x - lx, z - lz) < L.r + 3) continue;
+        if (Math.abs((east ? z : x) - c) <= CORRIDOR + 1) continue;
+        spots.push({ x: x + 0.5, z: z + 0.5 });
+      }
+    const pickSpots = (n, apart) => {
+      const out = [];
+      for (let tries = 0; tries < 2000 && out.length < n && spots.length; tries++) {
+        const s = spots[rng.int(0, spots.length - 1)];
+        if (out.every((o) => Math.hypot(o.x - s.x, o.z - s.z) >= apart)) out.push(s);
+      }
+      return out;
+    };
+    const lavaTiles = [];
+    if (kind === 'ember')
+      for (let z = R.z0; z < R.z1; z++) for (let x = R.x0; x < R.x1; x++) if (tiles[idx(x, z)] === T.LAVA) lavaTiles.push({ x: x + 0.5, z: z + 0.5 });
+    const props = {
+      frost: () => ({ snowmen: pickSpots(6, 8), penguins: pickSpots(7, 6) }),
+      ember: () => ({ sprites: pickSpots(6, 8), bubbles: Array.from({ length: Math.min(14, lavaTiles.length) }, () => lavaTiles[rng.int(0, lavaTiles.length - 1)]) }),
+      glimmer: () => ({ flowers: pickSpots(26, 3), butterflies: pickSpots(9, 6) }),
+    }[kind]();
+
     const [gx, gz] = along(CORE, c);
     return {
       kind,
@@ -112,8 +159,47 @@ export function generateRealmWorld(seed) {
       gate,
       gateAt: { x: gx + 0.5, z: gz + 0.5, east },
       nest: { x: cx + 0.5, z: cz + 0.5 },
+      landmark: { what: L.what, x: lx + 0.5, z: lz + 0.5, r: L.r },
+      props,
     };
   });
+
+  // mountains: rock rises the further it is from open ground, in each land's own kind of rock
+  const rockHeight = new Float32Array(W * W);
+  const rockStyle = new Uint8Array(W * W);
+  const far = new Int16Array(W * W).fill(-1);
+  const queue = [];
+  for (let i = 0; i < W * W; i++) if (tiles[i] !== T.ROCK) {
+    far[i] = 0;
+    queue.push(i);
+  }
+  for (let h = 0; h < queue.length; h++) {
+    const i = queue[h], x = i % W, z = (i / W) | 0;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, nz = z + dz;
+      if (nx < 0 || nz < 0 || nx >= W || nz >= W || far[idx(nx, nz)] !== -1) continue;
+      far[idx(nx, nz)] = far[i] + 1;
+      queue.push(idx(nx, nz));
+    }
+  }
+  const bumps = createNoise2D(rng.next);
+  for (let z = 0; z < W; z++)
+    for (let x = 0; x < W; x++) {
+      const i = idx(x, z);
+      if (tiles[i] !== T.ROCK) continue;
+      rockHeight[i] = heights.get(i) ?? 1.4 + Math.min(far[i], 8) * 0.85 + bumps(x / 9, z / 9) * 0.9 + (bumps(x / 2.3, z / 2.3) + 1) * 0.25;
+      // the rock of the nearest land (plain grey further away)
+      let style = ROCK_STYLE.grey, best = 18;
+      for (const r of realms) {
+        const b = r.bounds;
+        const d = Math.hypot(Math.max(b.x0 - x, 0, x - b.x1 + 1), Math.max(b.z0 - z, 0, z - b.z1 + 1));
+        if (d < best) {
+          best = d;
+          style = ROCK_STYLE[r.kind];
+        }
+      }
+      rockStyle[i] = styles.get(i) ?? style;
+    }
 
   // trees: the usual world's as they were (less any cut for paths), then the new lands'
   const objects = [...core.buildings];
@@ -121,7 +207,7 @@ export function generateRealmWorld(seed) {
   for (let z = 0; z < W; z++)
     for (let x = 0; x < W; x++) if ((x >= CORE || z >= CORE) && tiles[idx(x, z)] === T.TREE) objects.push({ type: 'tree', kind: treeKind[idx(x, z)], x, z, variant: rng.int(0, 1000) });
 
-  return { ...core, width: W, height: W, tiles, treeKind, objects, core: CORE, realms };
+  return { ...core, width: W, height: W, tiles, treeKind, objects, core: CORE, realms, rockHeight, rockStyle };
 
   function paint(kind, x, z, n1, n2) {
     const e = n1(x / 13, z / 13), s = n2(x / 7, z / 7);

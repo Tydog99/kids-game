@@ -20,6 +20,17 @@ const TREE_VARIANTS = {
   [TREE_KIND.CRYSTAL]: [0, 1, 2, 3].map((v) => crystalTree(v)),
 };
 // the ground under a tree, by kind of tree
+// mountain rock by land (realms.js ROCK_STYLE): grey, Frost's blue-grey, Ember's basalt, Glimmer's
+// pastel crystal; high Frost and grey peaks get snow on top, and Ember's basalt has glowing cracks
+const ROCK_COLORS = [
+  ['#7d7672', '#8a827d', '#6f6864', '#948c86'],
+  ['#8a96a8', '#9aa6b6', '#7f8b9c', '#a4afbd'],
+  ['#2e2626', '#3b302e', '#463936', '#332a29'],
+  ['#cdb8f0', '#f0c2e0', '#b8e8ee', '#e8d8ff'],
+];
+const SNOW_LINE = [6.2, 3.4, Infinity, Infinity];
+const SNOW = ['#ffffff', '#eef4fd', '#f6f9ff'];
+const LAVA_CRACK = ['#ff6a1a', '#ff8c1a'];
 const TREE_GROUND = { [TREE_KIND.DEAD]: T.VOLCANIC, [TREE_KIND.SNOW_PINE]: T.SNOW, [TREE_KIND.CRYSTAL]: T.CRYSTAL };
 
 const DETAIL = {
@@ -153,8 +164,8 @@ export class WorldRenderer {
     const w = this.world;
     if (x < 0 || z < 0 || x >= w.width || z >= w.height) return 0.25;
     const t = w.tiles[z * w.width + x];
-    // mountains: craggy, each column of rock its own height
-    if (t === T.ROCK) return 2.2 + (Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1) * 2.4;
+    // mountains: each column of rock its own height (realms.js)
+    if (t === T.ROCK) return w.rockHeight?.[z * w.width + x] || 3;
     return TILE_INFO[t].height;
   }
 
@@ -178,6 +189,10 @@ export class WorldRenderer {
             const h = this.heightAt(x, z);
             const batch = t === T.WATER ? water : t === T.LAVA ? lava : land;
             const colors = this.groundColors(x, z);
+            if (t === T.ROCK) {
+              this.addRock(land, x, z, h);
+              continue;
+            }
             // side faces only where the neighbour is lower
             const side = (nx, nz) => {
               const nh = this.heightAt(nx, nz);
@@ -207,6 +222,35 @@ export class WorldRenderer {
         }
       }
     }
+  }
+
+  // A column of mountain rock, with a snow cap above the snow line or glowing cracks in basalt.
+  addRock(batch, x, z, h) {
+    const w = this.world, rng = this.rng;
+    const style = w.rockStyle?.[z * w.width + x] ?? 0;
+    const colors = ROCK_COLORS[style];
+    const cap = h > SNOW_LINE[style] ? 0.3 : 0;
+    const side = (nx, nz) => {
+      const nh = this.heightAt(nx, nz);
+      return nh < h ? nh : false;
+    };
+    for (let sz = 0; sz < 2; sz++)
+      for (let sx = 0; sx < 2; sx++) {
+        const x0 = x + sx * CELL, z0 = z + sz * CELL;
+        const faces = {
+          top: !cap,
+          px: sx === 1 ? side(x + 1, z) : false,
+          nx: sx === 0 ? side(x - 1, z) : false,
+          pz: sz === 1 ? side(x, z + 1) : false,
+          nz: sz === 0 ? side(x, z - 1) : false,
+        };
+        const color = style === 2 && rng.chance(0.025) ? rng.pick(LAVA_CRACK) : rng.pick(colors);
+        batch.box(x0, 0, z0, x0 + CELL, h - cap, z0 + CELL, color, faces, 0.94 + rng.next() * 0.12);
+        if (cap) {
+          const capSide = (f) => (f === false ? false : Math.max(f, h - cap));
+          batch.box(x0, h - cap, z0, x0 + CELL, h, z0 + CELL, rng.pick(SNOW), { top: true, px: capSide(faces.px), nx: capSide(faces.nx), pz: capSide(faces.pz), nz: capSide(faces.nz) });
+        }
+      }
   }
 
   // Little voxel decorations so tiles don't look flat.
