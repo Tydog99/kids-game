@@ -217,9 +217,12 @@ export class FrostQuest {
     return realmAt(this.g.world, Math.floor(p.x), Math.floor(p.z)) === this.realm;
   }
 
-  // The quest tracker's goal while in the Frozen Land.
-  goalHere(p) {
-    return this.inLand(p) ? frostGoal(this.s) : null;
+  // This land's quest for the quest tracker, once you've been here and met who asks for help
+  // (here: you're in the land now). Null once it's all done.
+  goal(p) {
+    const here = this.inLand(p);
+    const goal = here || this.s.metMama ? frostGoal(this.s) : null;
+    return goal && { ...goal, here };
   }
 
   // Where the compass points while in the Frozen Land.

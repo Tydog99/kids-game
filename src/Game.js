@@ -623,18 +623,20 @@ export class Game {
     return this.story?.talker() ?? this.landQuests.map((q) => q.talker()).find(Boolean) ?? null;
   }
 
-  // The quest box shows the story's goal, or a land's own quest while you're in that land.
+  // The quest box lists every quest going on: the land you're in first (the compass points to
+  // it), then the story's goal, then the other lands' quests you've started.
   setMainGoal(goal) {
     this.mainGoal = goal;
   }
 
   updateGoal() {
     const p = this.playerInfo();
-    const goal = this.landQuests.map((q) => q.goalHere(p)).find(Boolean) ?? this.mainGoal ?? null;
-    const key = goal ? goal.icon + goal.text : '';
+    const lands = this.landQuests.map((q) => q.goal(p)).filter(Boolean);
+    const goals = [...lands.filter((g) => g.here), this.mainGoal, ...lands.filter((g) => !g.here)].filter(Boolean);
+    const key = goals.map((g) => g.icon + g.text).join('|');
     if (key === this.goalShown) return;
     this.goalShown = key;
-    this.hud.showGoal(goal);
+    this.hud.showGoals(goals);
   }
 
   // The quest compass: which way (from where the camera looks) to the quest's target, and how far.

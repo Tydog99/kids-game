@@ -225,8 +225,12 @@ export class GlimmerQuest {
     return realmAt(this.g.world, Math.floor(p.x), Math.floor(p.z)) === this.realm;
   }
 
-  goalHere(p) {
-    return this.inLand(p) ? glimmerGoal(this.s) : null;
+  // This land's quest for the quest tracker, once you've been here and met who asks for help
+  // (here: you're in the land now). Null once it's all done.
+  goal(p) {
+    const here = this.inLand(p);
+    const goal = here || this.s.metLuna ? glimmerGoal(this.s) : null;
+    return goal && { ...goal, here };
   }
 
   target(p) {

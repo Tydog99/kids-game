@@ -17,7 +17,7 @@ export class Hud {
       </div>
       <div class="banner"></div>
       <div class="keys" hidden></div>
-      <div class="goal" hidden aria-live="polite"><h2 class="goal-head">Quests</h2><span class="goal-icon"></span><span class="goal-text"></span><span class="compass" hidden aria-hidden="true"><span class="needle">➤</span><small></small></span></div>
+      <div class="goal" hidden aria-live="polite"><h2 class="goal-head">Quests</h2><span class="compass" hidden aria-hidden="true"><span class="needle">➤</span><small></small></span></div>
       <div class="speech" hidden aria-live="polite"><b class="speech-who"></b><span class="speech-text"></span><button type="button" class="speech-read" aria-label="Read out loud">🔊</button></div>
       <div class="daypanel">
         <div class="setting">
@@ -173,13 +173,21 @@ export class Hud {
     this.el.querySelector('#dragons').closest('.setting').hidden = true;
   }
 
-  // The quest tracker: what to do next.
-  showGoal(goal) {
+  // The quest tracker: every quest going on ([{ icon, text }]), the one to do now first.
+  showGoals(goals) {
     const g = this.el.querySelector('.goal');
-    g.hidden = !goal;
-    if (!goal) return;
-    g.querySelector('.goal-icon').textContent = goal.icon;
-    g.querySelector('.goal-text').textContent = goal.text;
+    g.hidden = !goals.length;
+    g.querySelectorAll('.goal-icon, .goal-text').forEach((e) => e.remove());
+    goals.forEach((goal, i) => {
+      const icon = document.createElement('span');
+      const text = document.createElement('span');
+      icon.className = 'goal-icon';
+      text.className = 'goal-text';
+      icon.textContent = goal.icon;
+      text.textContent = goal.text;
+      if (i > 0) icon.classList.add('later'), text.classList.add('later');
+      g.append(icon, text);
+    });
   }
 
   // The quest compass: angle (radians, 0 = straight ahead, clockwise) to the quest's target and a

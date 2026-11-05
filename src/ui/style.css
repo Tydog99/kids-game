@@ -313,8 +313,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   pointer-events: none;
 }
 .goal[hidden], .speech[hidden], .book-btn[hidden] { display: none; }
-.goal-icon { font-size: 24px; }
-.compass { display: grid; justify-items: center; width: 46px; }
+.goal-icon { font-size: 24px; grid-column: 1; }
+.goal-text { grid-column: 2; }
+.goal-icon.later { font-size: 18px; }
+.goal-text.later { grid-column: 2 / -1; font-size: 14px; color: #5a4a2a; }
+.compass { display: grid; justify-items: center; width: 46px; grid-column: 3; grid-row: 2; }
 .compass[hidden] { display: none; }
 .compass .needle {
   display: grid;
