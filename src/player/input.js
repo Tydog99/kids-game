@@ -14,7 +14,31 @@ const PAD_BUTTONS = {
   12: 'forward', 13: 'back', 14: 'left', 15: 'right',
 };
 const STICK = 0.35; // how far a stick must move to count
+const TURN_DEAD = 0.25; // sideways wobble on the stick smaller than this doesn't turn
 export const PAD_START = 9;
+
+// Steps for the "Turning" slider: how fast you turn, against the normal speed.
+export const TURN_SPEEDS = [
+  { label: 'Very slow', scale: 0.45 },
+  { label: 'Slow', scale: 0.6 },
+  { label: 'Gentle', scale: 0.8 },
+  { label: 'Normal', scale: 1 },
+  { label: 'Fast', scale: 1.25 },
+];
+export const DEFAULT_TURN_INDEX = 2;
+
+// Holding a turn button starts slow and builds up, so a quick tap is a small nudge.
+export const TURN_RAMP = { start: 0.3, time: 0.6 };
+export function turnRamp(heldFor) {
+  return TURN_RAMP.start + (1 - TURN_RAMP.start) * Math.min(1, heldFor / TURN_RAMP.time);
+}
+
+// The stick turns as far as it is pushed: past the dead zone, gently at first.
+export function stickTurn(x) {
+  const a = Math.abs(x);
+  if (a < TURN_DEAD) return 0;
+  return -Math.sign(x) * ((Math.min(1, a) - TURN_DEAD) / (1 - TURN_DEAD)) ** 1.6;
+}
 const KEYS = {
   ArrowUp: 'forward', KeyW: 'forward',
   ArrowDown: 'back', KeyS: 'back',
@@ -30,6 +54,11 @@ export class Input {
     this.tapped = { ...this.held };
     this.pad = { ...this.held }; // what the game controller is holding
     this.look = 0; // right stick, left (-1) to right (1)
+    this.stick = 0; // left stick's turn, from stickTurn
+    this.turnScale = 1; // from the Turning slider
+    this.turnDir = 0; // turn button held (1 left, -1 right), and since when
+    this.turnSince = 0;
+    this.now = () => performance.now() / 1000;
     this.padConnected = false;
     this.onDown = (e) => {
       const a = KEYS[e.code];
@@ -51,10 +80,18 @@ export class Input {
     window.addEventListener('blur', this.onBlur);
   }
 
-  // Held keys (and controller buttons) plus taps that haven't been acted on yet.
+  // Held keys (and controller buttons) plus taps that haven't been acted on yet, and turn: how
+  // hard to turn, from 1 (left, full speed) to -1 (right).
   peek() {
     const out = {};
     for (const k in this.held) out[k] = this.held[k] || this.tapped[k] || this.pad[k];
+    const dir = (out.left ? 1 : 0) - (out.right ? 1 : 0);
+    if (dir !== this.turnDir) {
+      this.turnDir = dir;
+      this.turnSince = this.now();
+    }
+    const turn = dir ? dir * turnRamp(this.now() - this.turnSince) : this.stick;
+    out.turn = turn * this.turnScale;
     return out;
   }
 
@@ -64,13 +101,13 @@ export class Input {
     this.padConnected = !!pad;
     const now = { forward: false, back: false, left: false, right: false, up: false, down: false, breathe: false, interact: false };
     this.look = 0;
+    this.stick = 0;
     if (pad) {
       for (const [i, a] of Object.entries(PAD_BUTTONS)) if (pad.buttons[i]?.pressed) now[a] = true;
       const [lx = 0, ly = 0, rx = 0] = pad.axes;
       if (ly < -STICK) now.forward = true;
       if (ly > STICK) now.back = true;
-      if (lx < -STICK) now.left = true;
-      if (lx > STICK) now.right = true;
+      this.stick = stickTurn(lx);
       if (Math.abs(rx) > 0.25) this.look = rx;
     }
     for (const a in now) {

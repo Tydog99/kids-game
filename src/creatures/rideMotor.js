@@ -8,7 +8,7 @@ export const RIDE = {
   walkBack: 1.4,
   fly: 7.5,
   flyBack: 2.5,
-  turn: 2.0,
+  turn: 1.7,
   climb: 3.6,
   sink: 3.2,
   ceiling: 16, // highest the dragon can fly
@@ -60,7 +60,7 @@ export class RideMotor {
   }
 
   update(dt, intent) {
-    const turn = (intent.left ? 1 : 0) - (intent.right ? 1 : 0);
+    const turn = intent.turn ?? (intent.left ? 1 : 0) - (intent.right ? 1 : 0);
     this.turnRate = smooth(this.turnRate, turn * RIDE.turn, 10, dt);
     this.heading += this.turnRate * dt;
 

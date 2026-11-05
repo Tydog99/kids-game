@@ -13,7 +13,7 @@ import { WorldRenderer } from './world/WorldRenderer.js';
 import { Environment } from './world/environment.js';
 import { EnvironmentView } from './world/EnvironmentView.js';
 import { Player } from './player/Player.js';
-import { Input } from './player/input.js';
+import { Input, TURN_SPEEDS, DEFAULT_TURN_INDEX } from './player/input.js';
 import { FollowCamera } from './camera/FollowCamera.js';
 import { Hud } from './ui/Hud.js';
 import { placeTreasure, TreasureHunt } from './treasure.js';
@@ -94,6 +94,8 @@ export class Game {
     const dayIndex = savedIndex('daySpeed', DEFAULT_DAY_INDEX, DAY_LENGTHS.length);
     const meteorIndex = savedIndex('meteors', DEFAULT_METEOR_INDEX, METEOR_RATES.length);
     const dragonCount = savedIndex('dragons', 3, MAX_DRAGONS + 1);
+    const turnIndex = savedIndex('turning', DEFAULT_TURN_INDEX, TURN_SPEEDS.length);
+    this.input.turnScale = TURN_SPEEDS[turnIndex].scale;
     this.dayCycle = new DayCycle(this.scene, this.skyScene, this.lights, { dayLength: DAY_LENGTHS[dayIndex] });
     this.dayCycle.shootingStars.perSecond = METEOR_RATES[meteorIndex].perSecond;
     this.hud = new Hud({
@@ -106,6 +108,11 @@ export class Game {
         save('daySpeed', String(i));
       },
       dragonCount,
+      turnIndex,
+      onTurnSpeed: (i) => {
+        this.input.turnScale = TURN_SPEEDS[i].scale;
+        save('turning', String(i));
+      },
       musicVolume: music.volume,
       onMusicVolume: (n) => {
         music.setVolume(n);

@@ -1,10 +1,11 @@
 import { DAY_LENGTHS, formatDayLength } from '../world/skyState.js';
 import { METEOR_RATES } from '../world/shootingStars.js';
 import { MAX_DRAGONS } from '../creatures/dragonSpawns.js';
+import { TURN_SPEEDS } from '../player/input.js';
 
 // In-game overlay: quest tracker, new world, controls hint, town banner, touch d-pad.
 export class Hud {
-  constructor({ onExit, onOptions, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate, dragonCount, onDragonCount, musicVolume, onMusicVolume }) {
+  constructor({ onExit, onOptions, input, dayIndex, onDaySpeed, meteorIndex, onMeteorRate, dragonCount, onDragonCount, musicVolume, onMusicVolume, turnIndex, onTurnSpeed }) {
     this.onDebugChange = null;
     this.el = document.createElement('div');
     this.el.className = 'overlay hud';
@@ -30,6 +31,10 @@ export class Hud {
         <div class="setting">
           <div class="setting-head"><label for="dragons">🐉 Dragons</label><output for="dragons"></output></div>
           <input id="dragons" type="range" min="0" max="${MAX_DRAGONS}" step="1" />
+        </div>
+        <div class="setting">
+          <div class="setting-head"><label for="turning">🔄 Turning</label><output for="turning"></output></div>
+          <input id="turning" type="range" min="0" max="${TURN_SPEEDS.length - 1}" step="1" />
         </div>
         <div class="setting">
           <div class="setting-head"><label for="music">🎵 Music</label><output for="music"></output></div>
@@ -64,6 +69,7 @@ export class Hud {
     this.slider('#dayspeed', dayIndex, (i) => formatDayLength(DAY_LENGTHS[i]), onDaySpeed);
     this.slider('#meteors', meteorIndex, (i) => METEOR_RATES[i].label, onMeteorRate);
     this.slider('#dragons', dragonCount, (n) => (n === 0 ? 'None' : String(n)), onDragonCount);
+    this.slider('#turning', turnIndex, (i) => TURN_SPEEDS[i].label, onTurnSpeed);
     this.slider('#music', musicVolume, (n) => (n === 0 ? 'Off' : String(n)), onMusicVolume);
     // the music picker can switch the music back on
     this.onMusicVolume = (e) => {

@@ -5,7 +5,7 @@ import { DIRS } from '../worldgen.js';
 
 export const WALK_SPEED = 3.0; // tiles per second
 export const BACK_SPEED = 1.6;
-export const TURN_SPEED = 2.6; // radians per second
+export const TURN_SPEED = 2.2; // radians per second, at full turn
 export const RADIUS = 0.28; // collision half-size of the player
 
 export const yawForFacing = (f) => Math.atan2(DIRS[f][0], DIRS[f][1]);
@@ -31,9 +31,10 @@ export class PlayerMotor {
     return Math.floor(this.pz);
   }
 
-  // intent: { forward, back, left, right } — booleans
+  // intent: { forward, back, left, right } — booleans — and turn, from 1 (left) to -1 (right);
+  // without it, left/right turn at full speed
   update(dt, intent) {
-    const turn = (intent.left ? 1 : 0) - (intent.right ? 1 : 0);
+    const turn = intent.turn ?? (intent.left ? 1 : 0) - (intent.right ? 1 : 0);
     this.turnRate += (turn * TURN_SPEED - this.turnRate) * (1 - Math.exp(-14 * dt));
     if (!turn && Math.abs(this.turnRate) < 0.01) this.turnRate = 0;
     this.yaw += this.turnRate * dt;
