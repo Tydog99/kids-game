@@ -2,7 +2,7 @@
 // arpeggio, a triangle bass and noise drums. Notes are scheduled a little ahead of time so the
 // rhythm stays steady. Browsers only allow sound after a click or key press, so call unlock()
 // from one; the music starts then.
-import { buildEvents, freq, theme as findTheme, eighthSeconds, loopLength } from './score.js';
+import { buildEvents, freq, theme as findTheme, eighthSeconds, loopLength, THEMES } from './score.js';
 
 const LOOKAHEAD = 0.25; // seconds of music scheduled ahead
 
@@ -20,6 +20,7 @@ export class Music {
     this.ctx = null;
     this.cache = new Map();
     this.previewNight = null; // the music picker can preview day or night
+    this.rotateEvery = 60; // seconds of playing before moving on to the next theme (0 = never)
     this.setTheme('hero');
   }
 
@@ -40,6 +41,13 @@ export class Music {
     if (th === this.theme) return;
     this.theme = th;
     this.bar = 0;
+    this.themeTime = 0; // seconds of this theme played
+  }
+
+  // The theme after this one, round the list.
+  nextTheme() {
+    const i = THEMES.indexOf(this.theme);
+    this.setTheme(THEMES[(i + 1) % THEMES.length].id);
   }
 
   // Call from a click or key press.
@@ -102,6 +110,9 @@ export class Music {
       for (const e of bars[this.bar]) this.play(e, this.barTime + (e.t - this.bar * th.bar) * eighth, night, eighth);
       this.bar = (this.bar + 1) % bars.length;
       this.barTime += th.bar * eighth;
+      this.themeTime += th.bar * eighth;
+      // a new song every minute, at the end of a bar (not while the music picker is previewing)
+      if (this.rotateEvery && this.previewNight === null && this.themeTime >= this.rotateEvery) this.nextTheme();
     }
   }
 

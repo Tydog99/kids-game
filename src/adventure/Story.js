@@ -572,6 +572,7 @@ export class Story {
   jumpTo(chapter) {
     save(this.key, JSON.stringify(progressAt(chapter, this.p.friends)));
     save(this.g.namesKey, '{}');
+    this.g.forgetSpot();
     this.g.restart();
   }
 
@@ -582,6 +583,7 @@ export class Story {
     save(`ember:${this.g.world.seed}`, '');
     save(`glimmer:${this.g.world.seed}`, '');
     save(this.g.namesKey, '{}');
+    this.g.forgetSpot();
     location.reload();
   }
 

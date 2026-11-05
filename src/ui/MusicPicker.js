@@ -29,6 +29,7 @@ export function openMusicPicker() {
       <p class="music-note" hidden>Music was off, so I turned it on. Change the volume with the 🎵 slider in the game.</p>
     </div>`;
   document.body.appendChild(el);
+  music.previewNight = music.night; // also holds the song still while you listen and choose
 
   const refresh = () => {
     el.querySelectorAll('.music-theme').forEach((b) => {

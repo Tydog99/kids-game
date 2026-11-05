@@ -183,6 +183,49 @@ export class Game {
       name: `${prefixes.splice(nameRng.int(0, prefixes.length - 1), 1)[0]} ${nameRng.pick(TOWN_SUFFIX)}`,
     }));
     this.currentTown = undefined;
+
+    // carry on from the same spot after a reload (saved every couple of seconds, and on leaving)
+    this.spotKey = `spot:${mode}:${seed}`;
+    this.spotT = 0;
+    this.restoreSpot();
+    this.onPageHide = () => this.saveSpot();
+    addEventListener('pagehide', this.onPageHide);
+  }
+
+  restoreSpot() {
+    let s;
+    try {
+      s = JSON.parse(load(this.spotKey, 'null'));
+    } catch {
+      return;
+    }
+    if (!s || ![s.x, s.z, s.yaw].every(Number.isFinite)) return;
+    const w = this.world;
+    if (s.x < 0 || s.z < 0 || s.x >= w.width || s.z >= w.height) return;
+    // somewhere you can stand now (not inside a locked land, a lake that froze over and melted…)
+    if (this.walkable(Math.floor(s.x), Math.floor(s.z)) !== true) return;
+    const land = realmAt(w, Math.floor(s.x), Math.floor(s.z));
+    if (land && !land.open) return;
+    const m = this.player.motor;
+    m.px = s.x;
+    m.pz = s.z;
+    m.yaw = s.yaw;
+    this.player.update(0, { peek: () => ({}), clearTaps() {} }, 0);
+  }
+
+  saveSpot() {
+    if (!this.spotKey || this.inArena || this.cutscene?.locked) return;
+    // riding: remember where the dragon is, if you could stand there
+    const { x, z } = this.riding ?? { x: this.player.motor.px, z: this.player.motor.pz };
+    if (this.walkable(Math.floor(x), Math.floor(z)) !== true) return;
+    const yaw = this.riding ? this.riding.heading : this.player.motor.yaw;
+    save(this.spotKey, JSON.stringify({ x: +x.toFixed(2), z: +z.toFixed(2), yaw: +yaw.toFixed(2) }));
+  }
+
+  // Start over / skip ahead: back to the start next time.
+  forgetSpot() {
+    save(this.spotKey, '');
+    this.spotKey = null;
   }
 
   setupDragToOrbit(canvas) {
@@ -555,6 +598,12 @@ export class Game {
       this.hud.showPrompt(d ? `🐉 E · ride ${d.name}` : look ? `📖 E · look at ${DRAGONS[look.kind].name}` : talker ? `💬 E · talk to ${talker.name}` : null);
     }
 
+    this.spotT += dt;
+    if (this.spotT > 2) {
+      this.spotT = 0;
+      this.saveSpot();
+    }
+
     const m = this.player.motor;
     if (this.hunt) this.updateHunt(dt, t, m);
     this.story?.update(dt, t);
@@ -676,6 +725,8 @@ export class Game {
   }
 
   dispose() {
+    this.saveSpot();
+    removeEventListener('pagehide', this.onPageHide);
     this.input.dispose();
     this.removeDrag();
     this.dragons.dispose();
