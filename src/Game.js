@@ -39,7 +39,7 @@ const ENV_TOP = { tree: 3.6, building: 6.8 }; // breath below this height hits t
 const MOUNT_REACH = 1.3; // how close (to the dragon's body) the player must be to climb on
 const TRUST_SHOW = 7; // show trust hearts when this close to an untrusted dragon
 const WALK_HINT = '⬆ walk &nbsp; ⬇ back up &nbsp; ⬅ ➡ turn &nbsp; 🖱 drag to look around';
-const PAD_WALK_HINT = '🎮 stick: walk &nbsp; <b>A</b> talk / ride &nbsp; right stick: look around';
+const PAD_WALK_HINT = '🎮 stick: walk &nbsp; <b>A</b> talk / ride &nbsp; <b>Select</b> call a dragon &nbsp; right stick: look around';
 const PAD_RIDE_HINT = '🎮 stick: fly &nbsp; <b>R</b> up &nbsp; <b>L</b> down &nbsp; <b>B</b> breathe &nbsp; <b>A</b> climb off';
 const RIDE_HINT = '⬆ fly &nbsp; ⬅ ➡ turn &nbsp; <b>Space</b> up &nbsp; <b>Shift</b> down &nbsp; <b>F</b> breathe &nbsp; <b>E</b> climb off';
 // what's on each tile, for a ridden dragon: how high it reaches and whether it can land there
@@ -422,6 +422,18 @@ export class Game {
     this.refreshMyDragons(true);
   }
 
+  // Select on the controller (or C): call a dragon. Each press calls the next one in My Dragons,
+  // so pressing again picks a different dragon.
+  callNextDragon() {
+    const mine = this.dragons.list.filter((d) => d.trusted).sort((a, b) => a.index - b.index);
+    if (!mine.length) return this.hud.showBanner('No dragon friends to call yet', true);
+    if (this.riding) return this.hud.showBanner(`You're riding ${this.riding.name}!`, true);
+    const last = mine.findIndex((d) => d.index === this.lastCalled);
+    const d = mine[(last + 1) % mine.length];
+    this.lastCalled = d.index;
+    this.callDragon(d.index);
+  }
+
   // Trust builds with grounded dragons you stay close to; shows hearts for the closest one.
   updateTrust(dt) {
     const p = this.playerInfo();
@@ -536,6 +548,7 @@ export class Game {
     const blocked = this.naming || this.modal || locked;
     if (this.modal || locked) this.input.clearTaps();
     const interact = blocked ? false : this.input.takeTap('interact');
+    if (this.input.takeTap('call') && !blocked) this.callNextDragon();
     let p;
     if (this.riding) {
       const d = this.riding;

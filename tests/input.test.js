@@ -70,6 +70,14 @@ describe('game controller', () => {
     expect(input.peek()).toMatchObject({ up: false, down: true });
   });
 
+  it('Select calls a dragon: one call per press', () => {
+    pad.buttons[8].pressed = true;
+    input.poll();
+    expect(input.takeTap('call')).toBe(true);
+    input.poll(); // still held
+    expect(input.takeTap('call')).toBe(false);
+  });
+
   it('the right stick looks around, and nothing happens without a controller', () => {
     pad.axes = [0, 0, 0.7, 0];
     input.poll();

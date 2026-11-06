@@ -6,7 +6,9 @@
 //   left stick / D-pad: walk and turn (fly when riding)    right stick: look around
 //   A (right): talk, look, climb on/off (like E)            B (bottom): breathe (like F)
 //   Y (left), R, ZR: fly up (like Space)                    X (top), L, ZL: fly down (like Shift)
+//   Select: call a dragon (like C; each press calls the next one)
 const PAD_BUTTONS = {
+  8: 'call',
   1: 'interact',
   0: 'breathe',
   2: 'up', 5: 'up', 7: 'up',
@@ -45,12 +47,12 @@ const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
   Space: 'up', ShiftLeft: 'down', ShiftRight: 'down',
-  KeyF: 'breathe', KeyE: 'interact',
+  KeyF: 'breathe', KeyE: 'interact', KeyC: 'call',
 };
 
 export class Input {
   constructor(target = window) {
-    this.held = { forward: false, back: false, left: false, right: false, up: false, down: false, breathe: false, interact: false };
+    this.held = { forward: false, back: false, left: false, right: false, up: false, down: false, breathe: false, interact: false, call: false };
     this.tapped = { ...this.held };
     this.pad = { ...this.held }; // what the game controller is holding
     this.look = 0; // right stick, left (-1) to right (1)
@@ -99,7 +101,7 @@ export class Input {
   poll() {
     const pad = [...(navigator.getGamepads?.() ?? [])].find((p) => p?.connected);
     this.padConnected = !!pad;
-    const now = { forward: false, back: false, left: false, right: false, up: false, down: false, breathe: false, interact: false };
+    const now = { forward: false, back: false, left: false, right: false, up: false, down: false, breathe: false, interact: false, call: false };
     this.look = 0;
     this.stick = 0;
     if (pad) {
