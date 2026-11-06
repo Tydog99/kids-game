@@ -6,7 +6,7 @@
 //   left stick / D-pad: walk and turn (fly when riding)    right stick: look around
 //   A (right): talk, look, climb on/off (like E)            B (bottom): breathe (like F)
 //   Y (left), R, ZR: fly up (like Space)                    X (top), L, ZL: fly down (like Shift)
-//   Select: call a dragon (like C; each press calls the next one)
+//   Select: open and close the dragon picker (like C): up/down choose, A calls
 const PAD_BUTTONS = {
   8: 'call',
   1: 'interact',

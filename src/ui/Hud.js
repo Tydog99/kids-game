@@ -17,7 +17,10 @@ export class Hud {
       </div>
       <div class="banner"></div>
       <div class="keys" hidden></div>
-      <div class="goal" hidden aria-live="polite"><h2 class="goal-head">Quests</h2><span class="compass" hidden aria-hidden="true"><span class="needle">➤</span><small></small></span></div>
+      <div class="goal-col">
+        <div class="goal" hidden aria-live="polite"><h2 class="goal-head">Quests</h2></div>
+        <div class="compass" hidden aria-hidden="true"><span class="needle">➤</span><small></small></div>
+      </div>
       <div class="speech" hidden aria-live="polite"><b class="speech-who"></b><span class="speech-text"></span><button type="button" class="speech-read" aria-label="Read out loud">🔊</button></div>
       <div class="daypanel">
         <div class="setting">
@@ -58,6 +61,7 @@ export class Hud {
       </div>
       <section class="my-dragons" hidden aria-label="My Dragons">
         <h2>My Dragons</h2>
+        <p class="pick-help" hidden>⬆ ⬇ choose &nbsp; <b>A</b> call &nbsp; <b>Select</b> close</p>
         <div class="my-dragons-list"></div>
       </section>
       <div class="trust-bubble" hidden aria-live="polite"><div class="hearts"></div><div class="trust-text"></div></div>
@@ -282,6 +286,7 @@ export class Hud {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'my-dragon';
+      b.dataset.index = d.index;
       b.style.setProperty('--swatch', d.color);
       b.title = d.status ? `${d.name}: ${d.status}` : `Call ${d.name}`;
       b.innerHTML = `<span class="swatch" aria-hidden="true"></span><span class="who"></span><small></small>`;
@@ -290,6 +295,15 @@ export class Hud {
       b.onclick = () => onCall(d.index);
       list.appendChild(b);
     }
+    this.pickDragon(this.picked ?? null);
+  }
+
+  // The controller's dragon picker: highlight one of My Dragons (null: the picker is closed).
+  pickDragon(index) {
+    this.picked = index;
+    this.myDragons.classList.toggle('picking', index !== null);
+    this.myDragons.querySelector('.pick-help').hidden = index === null;
+    this.myDragons.querySelectorAll('.my-dragon').forEach((b) => b.classList.toggle('picked', Number(b.dataset.index) === index));
   }
 
   // Ask for a new dragon's name. Calls onDone(name) once.
