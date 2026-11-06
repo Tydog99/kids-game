@@ -310,21 +310,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 2px 8px;
-  max-width: min(360px, calc(100vw - 200px));
-  padding: 6px 12px;
+  max-width: min(480px, calc(100vw - 220px));
+  padding: 8px 14px;
   border: 3px solid var(--ink);
   border-radius: 14px;
   background: rgba(255, 250, 240, 0.94);
   box-shadow: var(--shadow);
-  font-size: 17px;
+  font-size: 23px;
+  line-height: 1.2;
   font-weight: 700;
   pointer-events: none;
 }
 .goal[hidden], .speech[hidden], .book-btn[hidden] { display: none; }
-.goal-icon { font-size: 24px; grid-column: 1; }
+.goal-icon { font-size: 32px; grid-column: 1; }
 .goal-text { grid-column: 2; }
-.goal-icon.later { font-size: 18px; }
-.goal-text.later { grid-column: 2 / -1; font-size: 14px; color: #5a4a2a; }
+.goal-icon.later { font-size: 24px; }
+.goal-text.later { grid-column: 2 / -1; font-size: 19px; color: #5a4a2a; }
 /* the quest compass: big, under the quest box, so it reads from across the room */
 .compass { display: grid; justify-items: center; gap: 4px; }
 .compass[hidden] { display: none; }
@@ -348,7 +349,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   color: #fff;
   text-shadow: 0 3px 0 var(--ink), 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 -2px 0 var(--ink);
 }
-.goal-head { grid-column: 1 / -1; margin: 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #6a5a2a; }
+.goal-head { grid-column: 1 / -1; margin: 0; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; color: #6a5a2a; }
 .speech {
   position: absolute;
   left: 50%;

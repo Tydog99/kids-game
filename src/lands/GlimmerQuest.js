@@ -4,6 +4,7 @@
 // forest and sparkly rainbow footsteps wherever you go.
 import * as THREE from 'three';
 import { realmAt } from '../realms.js';
+import { RainbowShot, RAINBOW_TIMES } from './RainbowShot.js';
 import { music } from '../audio/Music.js';
 import { speak, speakLine } from '../ui/speak.js';
 import { load, save } from '../ui/storage.js';
@@ -17,6 +18,32 @@ const STAR_REACH = 3.2; // flying this close to the top of the tree places the s
 const PASTEL = ['#ff9fd0', '#ffb36b', '#ffe27a', '#8ff0ff', '#c9a6ff'];
 const NOTES = [523, 587, 659, 784, 880]; // each singing crystal's note (C D E G A)
 const TRAIL = 60;
+// the little rainbows round the forest, from its middle: [dx, dz, size, turn]
+const LITTLE_RAINBOWS = [[-30, -14, 11, 0.5], [30, 12, 12, -0.4], [-26, 17, 10, -0.7], [27, -16, 11, 0.8], [0, -21, 9, 0.1], [-6, 21, 9, 1.4]];
+
+// A rainbow: pastel arcs, the biggest outside. grow(k) draws k (0..1) of it, from one foot over
+// the top to the other.
+function rainbowArcs(radius, band, tube) {
+  const g = new THREE.Group();
+  PASTEL.forEach((c, i) => {
+    const arc = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.55, fog: false, depthWrite: false }));
+    arc.userData.r = radius - i * band;
+    g.add(arc);
+  });
+  g.userData.tube = tube;
+  g.userData.k = -1;
+  return g;
+}
+function growRainbow(g, k) {
+  k = Math.round(Math.max(0, Math.min(1, k)) * 48) / 48;
+  if (k === g.userData.k) return;
+  g.userData.k = k;
+  g.visible = k > 0;
+  for (const arc of g.children) {
+    arc.geometry.dispose();
+    arc.geometry = k > 0 ? new THREE.TorusGeometry(arc.userData.r, g.userData.tube, 6, Math.max(3, Math.round(48 * k)), Math.PI * k) : new THREE.BufferGeometry();
+  }
+}
 
 const lambert = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
 function mesh(geo, mat, x = 0, y = 0, z = 0) {
@@ -171,15 +198,28 @@ export class GlimmerQuest {
   // the reward: the tree's star shines, a rainbow over the forest, rainbow footsteps
   celebrate(fresh) {
     if (!this.rainbow) {
-      const g = new THREE.Group();
-      PASTEL.forEach((c, i) => {
-        const arc = new THREE.Mesh(new THREE.TorusGeometry(26 - i * 1.1, 0.55, 6, 48, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.55, fog: false, depthWrite: false }));
-        g.add(arc);
-      });
+      // one big rainbow over the forest, and little ones all round it
       const b = this.realm.bounds;
-      g.position.set((b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2);
+      const cx = (b.x0 + b.x1) / 2, cz = (b.z0 + b.z1) / 2;
+      const g = new THREE.Group();
+      const big = rainbowArcs(26, 1.1, 0.55);
+      big.position.set(cx, 0, cz);
+      g.add(big);
+      for (const [dx, dz, r, turn] of LITTLE_RAINBOWS) {
+        const little = rainbowArcs(r, 0.6, 0.32);
+        little.position.set(cx + dx, 0, cz + dz);
+        little.rotation.y = turn;
+        g.add(little);
+      }
       this.group.add(g);
       this.rainbow = g;
+      // fresh: they grow in during the cutscene; otherwise they're already there
+      this.rainbowT = fresh ? 0 : Infinity;
+      this.growRainbows();
+      if (fresh) {
+        this.g.cutscene?.cancel();
+        this.g.cutscene = new RainbowShot({ x: this.q.tree.x, y: this.q.tree.top + 1, z: this.q.tree.z }, { x: cx, z: cz }, this.g.scene);
+      }
     }
     if (!this.treeLight) {
       this.treeLight = new THREE.PointLight('#fff3b0', fresh ? 0 : 3, 30, 1.2);
@@ -187,6 +227,15 @@ export class GlimmerQuest {
       this.group.add(this.treeLight);
     }
     if (!this.trail) this.makeTrail();
+  }
+
+  // the rainbows grow in on the cutscene's clock: the big one, then the little ones in turn
+  growRainbows() {
+    const T = RAINBOW_TIMES, t = this.rainbowT;
+    this.rainbow.children.forEach((r, i) => {
+      const start = i === 0 ? T.main : T.extra + (i - 1) * T.extraEvery;
+      growRainbow(r, (t - start) / (i === 0 ? T.mainFor : T.extraFor));
+    });
   }
 
   makeTrail() {
@@ -385,8 +434,8 @@ export class GlimmerQuest {
     const top = { x: this.q.tree.x, y: this.q.tree.top + 1, z: this.q.tree.z };
     if (Math.hypot(r.x - top.x, r.y + 1 - top.y, r.z - top.z) < STAR_REACH || (Math.hypot(r.x - top.x, r.z - top.z) < 2.5 && r.y > top.y - 3)) {
       this.set({ type: 'starPlaced' });
+      this.celebrate(true); // before placeStar, which would put up the finished rainbow
       this.placeStar();
-      this.celebrate(true);
       this.glowUp = 0;
       this.g.hud.showBanner('The whole forest is glowing! 🌈', true);
       speakLine('n_star');
@@ -424,7 +473,11 @@ export class GlimmerQuest {
       this.glowUp += dt;
       this.treeLight.intensity = Math.min(3, this.glowUp * 1.5);
     }
-    if (this.rainbow) this.rainbow.children.forEach((a, i) => (a.material.opacity = 0.45 + Math.sin(t * 0.8 + i * 0.4) * 0.1));
+    if (this.rainbow) {
+      this.rainbowT += dt;
+      this.growRainbows();
+      for (const r of this.rainbow.children) r.children.forEach((a, i) => (a.material.opacity = 0.45 + Math.sin(t * 0.8 + i * 0.4) * 0.1));
+    }
     this.updateTrail(dt, t, p);
   }
 
